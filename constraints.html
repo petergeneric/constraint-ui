@@ -17,9 +17,9 @@
 </head>
 <body>
 
-<form method="get">
+<form method="get" class="constraint_list">
 All of:
-<ul class="constraint_list" id="constraint_list">
+<ul>
 
 	<!-- UI prototypes -->
 	<li class="constraint_ui_prototype">
@@ -71,78 +71,93 @@ All of:
 			<option value="version">version</option>
 		</select>
 		
-		<a href="#" class="debug_el debug_constraint_encode_all">repopulate hidden form</a>
+		<a href="#" class="debug_el debug_constraint_decode_all">decode from hidden form</a>
 	</li>
 	
 	<!-- Where the hidden form fields will be placed -->
-	<li class="constraint_form_fields" />
+	<li class="constraint_form_fields">
+		<input type="hidden" name="id" value="_null" />
+		<input type="hidden" name="id" value="_notnull" />
+		<input type="hidden" name="id" value="_f_range_1..10" />
+		<input type="hidden" name="some.constraint" value="_f_range_20..30" />
+		<input type="hidden" name="some.constraint" value="xyz" />
+	</li>
 </ul>
 
-	<input type="submit" value="Search" />
+	<input class="constraint_search_submit" type="submit" value="Search" />
 </form>
 
 
-<!--
-Javascript should:
-	- Bind event handler to all a#click,select#change descendants of li.constraint_field
-		- On click a.constraint_remove_all, find the ancestor ul.constraint_field and remove from DOM
-		- On click a.constraint_remove, find the ancestor li.constraint_value and remove from DOM
-		- On change select.constraint_function, add/remove text field as necessary
-		- On click a.constraint_value_add, duplicate prototype_constraint_value and add before li.constraint_field_add
-		- On change select.constraint_add, duplicate prototype_constraint_field before li.constraint_add
-	- Generate DOM based on input query:
-		- Find fields, call add on them
-		- Regenerate hidden form for query
-	- On click search, regenerate hidden search form
-		- Find all li.constraint_field, use contents of span.constraint_field_name as field name
-			- Find all li.constraint_value, call function to return query string values (e.g. "_contains_xyz")
-			- Add hidden input with this name+value
-
--->
-
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
 	<script>
-		$("#constraint_list select.constraint_add").change(
+		$(".constraint_list select.constraint_add").change(
 		function constraintAddSelectChanged() {
 			if (this.value != "") {
 				if (!hasConstraintField(this, this.value)) {
-					createNewConstraintField(this.value);
+					var newConstraintField = createNewConstraintField($(this), this.value);
+					
+			
+					// Add a new field value
+					createNewConstraintValue(constraintFieldElement, "_f_eq_");
 				}
 				
 				$(this).val("");
 			}
 		});
 		
-		$("a.debug_constraint_encode_all").click(function() {
+		$(".constraint_search_submit").click(function() {
 			encodeConstraintValues($(this));
+			
+			return true;
 		});
 		
-		function createNewConstraintField(fieldName) {
-			var constraintFieldElement = $("#constraint_list li.prototype_constraint_field").clone();
-			var constraintAddElement = $("#constraint_list li.constraint_add");
+		$("a.debug_constraint_decode_all").click(function() {
+			decodeConstraintValues($(this));
+		});
+		
+		function createNewConstraintField(contextElement, fieldName) {
+			contextElement = $(contextElement);
+			
+			var constraintFieldElement = getConstraintField(contextElement, fieldName);
+			
+			if (constraintFieldElement == null) {
+				var constraintList = contextElement.closest(".constraint_list");
+				
+				// Construct a new constraint field
+				constraintFieldElement = constraintList.find("li.prototype_constraint_field").clone();
+				
+				var insertionPoint = constraintList.find("li.constraint_add"); // element before which we insert new constraint_field
 
-			constraintFieldElement.removeClass("prototype_constraint_field");
-			constraintFieldElement.addClass("constraint_field");
-			constraintFieldElement.insertBefore(constraintAddElement);
+				constraintFieldElement.removeClass("prototype_constraint_field");
+				constraintFieldElement.addClass("constraint_field");
+				constraintFieldElement.insertBefore(insertionPoint);
 			
-			constraintFieldElement.find(".constraint_field_name").html(fieldName);
+				constraintFieldElement.find(".constraint_field_name").html(fieldName);
 			
-			setupConstraintFieldLinks(constraintFieldElement);
+				setupConstraintFieldLinks(constraintFieldElement);
+			}
 			
-			// Add a new field value
-			createNewConstraintValue(constraintFieldElement, "eq", "");
+			return constraintFieldElement;
 		}
 		
 		function hasConstraintField(contextElement, fieldName) {
+			return (getConstraintField(contextElement, fieldName) != null);
+		}
+		
+		function getConstraintField(contextElement, fieldName) {
 			var constraintList = $(contextElement).closest(".constraint_list");
-			
+
 			// Search for constraint_field_name elements matching the requested field name
-			var results = constraintList.find(".constraint_field .constraint_field_name").filter(function() {
-				return ($(this).text() == fieldName);
+			var results = constraintList.find(".constraint_field").filter(function() {
+				return ($(this).find(".constraint_field_name").text() == fieldName);
 			});
 
-			// Return true if this constraint field already exists
-			return (results.size() != 0);
+			if (results.size() == 0) {
+				return null;
+			}
+			else {
+				return $(results[0]);
+			}
 		}
 		
 		function setupConstraintFieldLinks(constraintFieldElement) {
@@ -150,7 +165,7 @@ Javascript should:
 			constraintFieldElement.find("a.constraint_value_add").click(function() {
 				var constraintFieldElement = $(this).closest("li.constraint_field");
 
-				createNewConstraintValue(constraintFieldElement, "eq", "");
+				createNewConstraintValue(constraintFieldElement, "_f_eq_");
 			});
 			
 			// Set up the remove link
@@ -162,7 +177,7 @@ Javascript should:
 		}
 		
 		// Constructs a new constraint value entry
-		function createNewConstraintValue(constraintFieldElement, defaultFunction, defaultFunctionArgs) {
+		function createNewConstraintValue(constraintFieldElement, encodedConstraint) {
 			var constraintValueElement = $("li.prototype_constraint_value").clone();
 
 			var constraintValueAddElement = constraintFieldElement.find("li.constraint_value_add");
@@ -173,8 +188,8 @@ Javascript should:
 			// Set up links and function select change tracking
 			setupConstraintValueLinks(constraintValueElement);
 			
-			// TODO set initial value so we populate the input fields necessary
-			setConstraintValue(constraintValueElement, defaultFunction, defaultFunctionArgs);
+			// set initial value so we populate the input fields necessary
+			setConstraintValueEncoded(constraintValueElement, encodedConstraint);
 		}
 		
 		function setupConstraintValueLinks(constraintValueElement) {
@@ -301,7 +316,6 @@ Javascript should:
 		}
 		
 		// Encode all constraint values, writing them out as a series of hidden inputs
-		// TODO this should really be writing them to a set of hidden form elements
 		function encodeConstraintValues(contextElement) {
 			var constraintList = contextElement.closest(".constraint_list");
 			var fields = constraintList.find(".constraint_field");
@@ -316,11 +330,33 @@ Javascript should:
 					var encoded = getConstraintValueEncoded($(fieldValue));
 					
 					var inputElement = $('<input type="hidden" />');
-					inputElement.attr('name', fieldName);
+					inputElement.attr("name", fieldName);
 					inputElement.val(encoded);
 					
 					hiddenForm.append(inputElement);
 				});
+			});
+		}
+		
+		function decodeConstraintValues(contextElement) {
+			var constraintList = contextElement.closest(".constraint_list");
+			
+			// clear any current constraints
+			constraintList.find(".constraint_field").remove();
+			
+			console.log("Results: " + constraintList.find(".constraint_form_fields input").size());
+			
+			constraintList.find(".constraint_form_fields input").each(function(i, input) {
+				input = $(input);
+				
+				var fieldName = input.attr("name");
+				var encoded = input.val();
+
+				// Create (or get) the field
+				var constraintFieldElement = createNewConstraintField(contextElement, fieldName);
+				
+				// Add the constraint
+				createNewConstraintValue(constraintFieldElement, encoded);
 			});
 		}
 	</script>	
