@@ -1,25 +1,29 @@
-$(".constraint_list select.constraint_add").change(
-function constraintAddSelectChanged() {
-	if (this.value != "") {
-		// Add a new field if necessary
-		var newConstraintField = createNewConstraintField($(this), this.value);
-			
-		// Add a new field value
-		createNewConstraintValue(newConstraintField, "_f_eq_");
-		
-		$(this).val("");
-	}
-});
-
-$(".constraint_search_submit").click(function() {
-	encodeConstraintValues($(this));
+function constraints_init(constraintListElement) {
+	constraintListElement = $(constraintListElement);
 	
-	return true;
-});
-
-$("a.debug_constraint_decode_all").click(function() {
-	decodeConstraintValues($(this));
-});
+	constraintListElement.find(".constraint_list select.constraint_add").change(
+	function constraintAddSelectChanged() {
+		if (this.value != "") {
+			// Add a new field if necessary
+			var newConstraintField = createNewConstraintField($(this), this.value);
+				
+			// Add a new field value
+			createNewConstraintValue(newConstraintField, "_f_eq_");
+			
+			$(this).val("");
+		}
+	});
+	
+	constraintListElement.find(".constraint_search_submit").click(function() {
+		encodeConstraintValues($(this));
+		
+		return true;
+	});
+	
+	constraintListElement.find("a.debug_constraint_decode_all").click(function() {
+		decodeConstraintValues($(this));
+	});
+}
 
 function createNewConstraintField(contextElement, fieldName) {
 	contextElement = $(contextElement);
