@@ -1,7 +1,7 @@
 function constraints_init(constraintListElement) {
 	constraintListElement = $(constraintListElement);
 	
-	constraintListElement.find(".constraint_list select.constraint_add").change(
+	constraintListElement.find("select.constraint_add").change(
 	function constraintAddSelectChanged() {
 		if (this.value != "") {
 			// Add a new field if necessary
