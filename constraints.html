@@ -7,9 +7,10 @@
 
 	/* Hide UI debug elements */	
 	.debug_el {
-/*		display: none;*/
+		display: none;
 	}
 	
+	/* Hide the element containing form fields */
 	li.constraint_form_fields {
 		display: none;
 	}
@@ -93,13 +94,11 @@ All of:
 		$(".constraint_list select.constraint_add").change(
 		function constraintAddSelectChanged() {
 			if (this.value != "") {
-				if (!hasConstraintField(this, this.value)) {
-					var newConstraintField = createNewConstraintField($(this), this.value);
+				// Add a new field if necessary
+				var newConstraintField = createNewConstraintField($(this), this.value);
 					
-			
-					// Add a new field value
-					createNewConstraintValue(constraintFieldElement, "_f_eq_");
-				}
+				// Add a new field value
+				createNewConstraintValue(newConstraintField, "_f_eq_");
 				
 				$(this).val("");
 			}
