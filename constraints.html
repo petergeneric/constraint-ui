@@ -38,7 +38,8 @@ All of:
 				
 				<span class="constraint_value_inputs">...</span>
 				
-				<a class="debug_constraint_value_display_encoded" href="#">display encoded</a>
+				<a class="debug_constraint_value_display_encoded" href="#">display encoded</a>, 
+				<a class="debug_constraint_value_set_encoded" href="#">set encoded</a>, 
 				<a class="constraint_value_remove" href="#">remove</a>
 			</li>
 			
@@ -115,7 +116,7 @@ Javascript should:
 			setupConstraintFieldLinks(constraintFieldElement);
 			
 			// Add a new field value
-			createNewConstraintFieldValue(constraintFieldElement, "eq", "");
+			createNewConstraintValue(constraintFieldElement, "eq", "");
 		}
 		
 		function hasConstraintField(contextElement, fieldName) {
@@ -135,7 +136,7 @@ Javascript should:
 			constraintFieldElement.find("a.constraint_value_add").click(function() {
 				var constraintFieldElement = $(this).closest("li.constraint_field");
 
-				createNewConstraintFieldValue(constraintFieldElement, "eq", "");
+				createNewConstraintValue(constraintFieldElement, "eq", "");
 			});
 			
 			// Set up the remove link
@@ -147,38 +148,51 @@ Javascript should:
 		}
 		
 		// Constructs a new constraint value entry
-		function createNewConstraintFieldValue(constraintFieldElement, defaultFunction, defaultFunctionArgs) {
-			var constraintFieldValueElement = $("li.prototype_constraint_value").clone();
+		function createNewConstraintValue(constraintFieldElement, defaultFunction, defaultFunctionArgs) {
+			var constraintValueElement = $("li.prototype_constraint_value").clone();
 
-			var constraintFieldValueAddElement = constraintFieldElement.find("li.constraint_value_add");
-			constraintFieldValueElement.removeClass("prototype_constraint_value");
-			constraintFieldValueElement.addClass("constraint_value");
-			constraintFieldValueElement.insertBefore(constraintFieldValueAddElement);
+			var constraintValueAddElement = constraintFieldElement.find("li.constraint_value_add");
+			constraintValueElement.removeClass("prototype_constraint_value");
+			constraintValueElement.addClass("constraint_value");
+			constraintValueElement.insertBefore(constraintValueAddElement);
 
 			// Set up links and function select change tracking
-			setupConstraintFieldValueLinks(constraintFieldValueElement);
+			setupConstraintValueLinks(constraintValueElement);
 			
 			// TODO set initial value so we populate the input fields necessary
-			setConstraintFieldValue(constraintFieldValueElement, defaultFunction, defaultFunctionArgs);
+			setConstraintValue(constraintValueElement, defaultFunction, defaultFunctionArgs);
 		}
 		
-		function setupConstraintFieldValueLinks(constraintFieldValueElement) {
-			constraintFieldValueElement.find("a.constraint_value_remove").click(function() {
+		function setupConstraintValueLinks(constraintValueElement) {
+			constraintValueElement.find("a.constraint_value_remove").click(function() {
 				$(this).closest(".constraint_value").remove();
 			});
 			
-			constraintFieldValueElement.find("select.constraint_function").change(function() {
-					setConstraintFieldValue($(this).closest(".constraint_value"), $(this).val(), "");
+			constraintValueElement.find("select.constraint_function").change(function() {
+					setConstraintValue($(this).closest(".constraint_value"), $(this).val(), "");
 			});
 			
-			constraintFieldValueElement.find("a.debug_constraint_value_display_encoded").click(function() {
+			constraintValueElement.find("a.debug_constraint_value_display_encoded").click(function() {
 				var constraintValue = $(this).closest(".constraint_value");
 				
-				alert(getConstraintFieldValueEncoded(constraintValue));
+				alert(getConstraintValueEncoded(constraintValue));
 			});
+			
+			constraintValueElement.find("a.debug_constraint_value_set_encoded").click(function() {
+				var constraintValue = $(this).closest(".constraint_value");
+				
+				var encoded = prompt("Encoded constraint", "_f_eq__test");
+				setConstraintValueEncoded(constraintValue, encoded);
+			});
+			
+			
 		}
 		
-		function getConstraintFieldValueEncoded(constraintValueElement) {
+		
+		// Given a Constraint Value <li>, returns the encoded representation of the function+value(s) combination
+		// Argument constraintValueElement: a jquery object representing a Constraint_Value (li.constraint_value)
+		// Returns: 
+		function getConstraintValueEncoded(constraintValueElement) {
 			var functionSelect = constraintValueElement.find("select.constraint_function");
 			
 			var func = functionSelect.val();
@@ -202,8 +216,27 @@ Javascript should:
 			
 			return "unknown-function-" + func;
 		}
+
+		// Given an encoded constraint value it changes the constraint displayed in the UI to match
+		// Argument constraintValueElement: a jquery object representing a Constraint_Value (li.constraint_value)
+		//
+		// Returns: nothing		
+		function setConstraintValueEncoded(constraintValueElement, encoded) {
+			if (encoded.indexOf("_") != 0) // raw eq
+				setConstraintValue(constraintValueElement, "eq", encoded);
+			else if (encoded.indexOf("_f_eq_") == 0) // encoded eq
+				setConstraintValue(constraintValueElement, "eq", encoded.substring(6));
+			else if (encoded.indexOf("_f_contains_") == 0) // contains
+				setConstraintValue(constraintValueElement, "contains", encoded.substring(12));
+			else if (encoded == "_null") // is null
+				setConstraintValue(constraintValueElement, "isnull", "");
+			else if (encoded == "_notnull") // is not null
+				setConstraintValue(constraintValueElement, "notnull", "");
+			else
+				alert("Unknown encoded value: " + encoded);
+		}
 		
-		function setConstraintFieldValue(constraintValueElement, constraintFunction, functionArgs) {
+		function setConstraintValue(constraintValueElement, constraintFunction, functionArgs) {
 			var constraintList = constraintValueElement.closest(".constraint_list");
 			var functionSelect = constraintValueElement.find("select.constraint_function");
 			var inputs = constraintValueElement.find(".constraint_value_inputs");
@@ -223,7 +256,7 @@ Javascript should:
 			}
 			else {
 				alert("Unknown constraint function: " + constraintFunction);
-				setConstraintFieldValue(constraintValueElement, "eq", ""); // change to eq ""
+				setConstraintValue(constraintValueElement, "eq", ""); // change to eq ""
 				return;
 			}
 
