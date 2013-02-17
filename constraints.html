@@ -21,6 +21,7 @@ All of:
 					<option value="notnull">is present</option>
 					<option value="isnull">is not present</option>
 					<option value="contains">contains</option>
+					<option value="range">range</option>
 				</select>
 				
 				<span class="constraint_value_inputs">...</span>
@@ -38,6 +39,10 @@ All of:
 			</li>
 			<li class="prototype_constraint_input_eq">
 				<input class="constraint_param" type="text" value="" placeholder="Value" />
+			</li>
+			
+			<li class="prototype_constraint_input_range">
+				<input class="constraint_param_low" type="text" value="" placeholder="Lowest" /> - <input class="constraint_param_high" type="text" value="" placeholder="Highest" />
 			</li>
 		</ul>
 	</li>
@@ -200,6 +205,11 @@ Javascript should:
 			else if (func == "notnull") {
 				return "_notnull";
 			}
+			else if (func == "range") {
+				var low = constraintValueElement.find(".constraint_value_inputs input.constraint_param_low");
+				var high = constraintValueElement.find(".constraint_value_inputs input.constraint_param_high");
+				return "_f_range_" + low.val() + ".." + high.val();
+			}
 			
 			return "unknown-function-" + func;
 		}
@@ -219,6 +229,13 @@ Javascript should:
 				setConstraintValue(constraintValueElement, "isnull", "");
 			else if (encoded == "_notnull") // is not null
 				setConstraintValue(constraintValueElement, "notnull", "");
+			else if (encoded.indexOf("_f_range_") == 0) { // range 
+				encoded = encoded.substring(9); // strip _f_range_
+				
+				var functionArgs = encoded.split("..",2);
+				
+				setConstraintValue(constraintValueElement, "range", functionArgs);
+			}
 			else
 				alert("Unknown encoded value: " + encoded);
 		}
@@ -236,6 +253,15 @@ Javascript should:
 
 				eqInput.val(functionArgs);
 				inputs.append(eqInput);
+			}
+			else if (constraintFunction == "range") {
+				// range - takes 2 text arguments
+				var rangeInputs = constraintList.find(".prototype_constraint_input_range input").clone();
+
+				rangeInputs.filter("input.constraint_param_low").val(functionArgs[0]);
+				rangeInputs.filter("input.constraint_param_high").val(functionArgs[1]);
+
+				inputs.append(rangeInputs);
 			}
 			else if (constraintFunction == "notnull" || constraintFunction == "isnull") {
 				// isNull or isNotNull - both take no arguments
