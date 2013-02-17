@@ -1,0 +1,240 @@
+<html>
+<head>
+<style>
+	li.constraint_ui_prototype {
+		display: none;
+	}
+</style>
+</head>
+<body>
+<!--
+Constraints:
+All of:
+ - scope.name is one of:
+		equals    [                            ]
+		equals    [                            ]
+		is specified
+		is not specified
+		contains  [                            ]
+		[add]
+ - job.type is one of:
+ 		equals    [ multiselect here would be fancy ]
+-->
+
+All of:
+<ul class="constraint_list" id="constraint_list">
+
+	<!-- UI prototypes -->
+	<li class="constraint_ui_prototype">
+		<ul>
+			<!-- Prototype constraint value - goes inside a constraint_field/ul/li before li.constraint_field_add -->
+			<li class="prototype_constraint_value">
+				<select class="constraint_function">
+					<option value="eq">equals</option>
+					<option value="notnull">is present</option>
+					<option value="isnull">is not present</option>
+					<option value="contains">contains</option>
+				</select>
+				
+				<span class="constraint_value_inputs">...</span>
+				
+				<a class="debug_constraint_value_display_encoded" href="#">display encoded</a>
+				<a class="constraint_value_remove" href="#">remove</a>
+			</li>
+			
+			<!-- Prototype constraint field -->
+			<li class="prototype_constraint_field"><span class="constraint_field_name">field.name</span> is one of: <a class="constraint_remove" href="#">remove</a>
+				<ul>
+					<li class="constraint_value_add"><a class="constraint_value_add" href="#">add</a></li>
+				</ul>
+			</li>
+			<li class="prototype_constraint_input_eq">
+				<input class="constraint_param" type="text" value="" placeholder="Value" />
+			</li>
+		</ul>
+	</li>
+	
+	<!-- Add constraint link -->
+	<li class="constraint_add">
+		Add constraint:
+		
+		<!-- Populate this with the value fields. Currently takes only the field names but could also take datatype -->
+		<select class="constraint_add">
+			<option selected value=""></option>
+			<option value="some.constraint">some.constraint</option>
+			<option value="some.other.constraint">some.other.constraint</option>
+			<option value="id">id</option>
+			<option value="name">name</option>
+			<option value="version">version</option>
+		</select>
+	</li>
+</ul>
+
+
+<!--
+Javascript should:
+	- Bind event handler to all a#click,select#change descendants of li.constraint_field
+		- On click a.constraint_remove_all, find the ancestor ul.constraint_field and remove from DOM
+		- On click a.constraint_remove, find the ancestor li.constraint_value and remove from DOM
+		- On change select.constraint_function, add/remove text field as necessary
+		- On click a.constraint_value_add, duplicate prototype_constraint_value and add before li.constraint_field_add
+		- On change select.constraint_add, duplicate prototype_constraint_field before li.constraint_add
+	- Generate DOM based on input query:
+		- Find fields, call add on them
+		- Regenerate hidden form for query
+	- On click search, regenerate hidden search form
+		- Find all li.constraint_field, use contents of span.constraint_field_name as field name
+			- Find all li.constraint_value, call function to return query string values (e.g. "_contains_xyz")
+			- Add hidden input with this name+value
+
+-->
+
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+	<script>
+		$("#constraint_list select.constraint_add").change(
+		function constraintAddSelectChanged() {
+			if (this.value != "") {
+				if (!hasConstraintField(this, this.value)) {
+					createNewConstraintField(this.value);
+				}
+				
+				$(this).val("");
+			}
+		});
+		
+		function createNewConstraintField(fieldName) {
+			var constraintFieldElement = $("#constraint_list li.prototype_constraint_field").clone();
+			var constraintAddElement = $("#constraint_list li.constraint_add");
+
+			constraintFieldElement.removeClass("prototype_constraint_field");
+			constraintFieldElement.addClass("constraint_field");
+			constraintFieldElement.insertBefore(constraintAddElement);
+			
+			constraintFieldElement.find(".constraint_field_name").html(fieldName);
+			
+			setupConstraintFieldLinks(constraintFieldElement);
+			
+			// Add a new field value
+			createNewConstraintFieldValue(constraintFieldElement, "eq", "");
+		}
+		
+		function hasConstraintField(contextElement, fieldName) {
+			var constraintList = $(contextElement).closest(".constraint_list");
+			
+			// Search for constraint_field_name elements matching the requested field name
+			var results = constraintList.find(".constraint_field .constraint_field_name").filter(function() {
+				return ($(this).text() == fieldName);
+			});
+
+			// Return true if this constraint field already exists
+			return (results.size() != 0);
+		}
+		
+		function setupConstraintFieldLinks(constraintFieldElement) {
+			// Set up the add constraint value link
+			constraintFieldElement.find("a.constraint_value_add").click(function() {
+				var constraintFieldElement = $(this).closest("li.constraint_field");
+
+				createNewConstraintFieldValue(constraintFieldElement, "eq", "");
+			});
+			
+			// Set up the remove link
+			constraintFieldElement.find("a.constraint_remove").click(function() {
+				var constraintFieldElement = $(this).closest("li.constraint_field");
+				
+				constraintFieldElement.remove();
+			});
+		}
+		
+		// Constructs a new constraint value entry
+		function createNewConstraintFieldValue(constraintFieldElement, defaultFunction, defaultFunctionArgs) {
+			var constraintFieldValueElement = $("li.prototype_constraint_value").clone();
+
+			var constraintFieldValueAddElement = constraintFieldElement.find("li.constraint_value_add");
+			constraintFieldValueElement.removeClass("prototype_constraint_value");
+			constraintFieldValueElement.addClass("constraint_value");
+			constraintFieldValueElement.insertBefore(constraintFieldValueAddElement);
+
+			// Set up links and function select change tracking
+			setupConstraintFieldValueLinks(constraintFieldValueElement);
+			
+			// TODO set initial value so we populate the input fields necessary
+			setConstraintFieldValue(constraintFieldValueElement, defaultFunction, defaultFunctionArgs);
+		}
+		
+		function setupConstraintFieldValueLinks(constraintFieldValueElement) {
+			constraintFieldValueElement.find("a.constraint_value_remove").click(function() {
+				$(this).closest(".constraint_value").remove();
+			});
+			
+			constraintFieldValueElement.find("select.constraint_function").change(function() {
+					setConstraintFieldValue($(this).closest(".constraint_value"), $(this).val(), "");
+			});
+			
+			constraintFieldValueElement.find("a.debug_constraint_value_display_encoded").click(function() {
+				var constraintValue = $(this).closest(".constraint_value");
+				
+				alert(getConstraintFieldValueEncoded(constraintValue));
+			});
+		}
+		
+		function getConstraintFieldValueEncoded(constraintValueElement) {
+			var functionSelect = constraintValueElement.find("select.constraint_function");
+			
+			var func = functionSelect.val();
+			
+			if (func == "eq" || func == "contains") {
+				var inputField = constraintValueElement.find(".constraint_value_inputs input");
+				
+				if (func == "eq" && inputField.val().indexOf("_") == 0)
+					return "_f_eq_" + inputField.val(); // Special-case eq starting with an _ (requires bulkier encoding)
+				else if (func == "eq")
+					return inputField.val();
+				else if (func == "contains")
+					return "_f_contains_" + inputField.val();
+			}
+			else if (func == "isnull") {
+				return "_null";
+			}
+			else if (func == "notnull") {
+				return "_notnull";
+			}
+			
+			return "unknown-function-" + func;
+		}
+		
+		function setConstraintFieldValue(constraintValueElement, constraintFunction, functionArgs) {
+			var constraintList = constraintValueElement.closest(".constraint_list");
+			var functionSelect = constraintValueElement.find("select.constraint_function");
+			var inputs = constraintValueElement.find(".constraint_value_inputs");
+			
+			inputs.empty(); // remove all existing controls
+			
+			if (constraintFunction == "eq" || constraintFunction == "contains") {
+				// eq or contains - both take a single text argument
+				var eqInput = constraintList.find(".prototype_constraint_input_eq input").clone();
+
+				eqInput.val(functionArgs);
+				inputs.append(eqInput);
+			}
+			else if (constraintFunction == "notnull" || constraintFunction == "isnull") {
+				// isNull or isNotNull - both take no arguments
+				functionSelect.val(constraintFunction);
+			}
+			else {
+				alert("Unknown constraint function: " + constraintFunction);
+				setConstraintFieldValue(constraintValueElement, "eq", ""); // change to eq ""
+				return;
+			}
+
+			// Now change functionSelect to reflect this new function
+			// N.B. Don't set the value if there's been no change
+			if (functionSelect.val() != constraintFunction) {			
+				functionSelect.val(constraintFunction);
+			}
+		}
+	</script>	
+		
+
+</body>
+</html>
