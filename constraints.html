@@ -4,10 +4,20 @@
 	li.constraint_ui_prototype {
 		display: none;
 	}
+
+	/* Hide UI debug elements */	
+	.debug_el {
+/*		display: none;*/
+	}
+	
+	li.constraint_form_fields {
+		display: none;
+	}
 </style>
 </head>
 <body>
 
+<form method="get">
 All of:
 <ul class="constraint_list" id="constraint_list">
 
@@ -26,8 +36,8 @@ All of:
 				
 				<span class="constraint_value_inputs">...</span>
 				
-				<a class="debug_constraint_value_display_encoded" href="#">display encoded</a>, 
-				<a class="debug_constraint_value_set_encoded" href="#">set encoded</a>, 
+				<a class="debug_el debug_constraint_value_display_encoded" href="#">display encoded</a>
+				<a class="debug_el debug_constraint_value_set_encoded" href="#">set encoded</a>
 				<a class="constraint_value_remove" href="#">remove</a>
 			</li>
 			
@@ -60,8 +70,16 @@ All of:
 			<option value="name">name</option>
 			<option value="version">version</option>
 		</select>
+		
+		<a href="#" class="debug_el debug_constraint_encode_all">repopulate hidden form</a>
 	</li>
+	
+	<!-- Where the hidden form fields will be placed -->
+	<li class="constraint_form_fields" />
 </ul>
+
+	<input type="submit" value="Search" />
+</form>
 
 
 <!--
@@ -93,6 +111,10 @@ Javascript should:
 				
 				$(this).val("");
 			}
+		});
+		
+		$("a.debug_constraint_encode_all").click(function() {
+			encodeConstraintValues($(this));
 		});
 		
 		function createNewConstraintField(fieldName) {
@@ -176,8 +198,6 @@ Javascript should:
 				var encoded = prompt("Encoded constraint", "_f_eq__test");
 				setConstraintValueEncoded(constraintValue, encoded);
 			});
-			
-			
 		}
 		
 		
@@ -278,6 +298,30 @@ Javascript should:
 			if (functionSelect.val() != constraintFunction) {			
 				functionSelect.val(constraintFunction);
 			}
+		}
+		
+		// Encode all constraint values, writing them out as a series of hidden inputs
+		// TODO this should really be writing them to a set of hidden form elements
+		function encodeConstraintValues(contextElement) {
+			var constraintList = contextElement.closest(".constraint_list");
+			var fields = constraintList.find(".constraint_field");
+			var hiddenForm = constraintList.find(".constraint_form_fields");
+			
+			hiddenForm.empty(); // remove previously generated results
+			
+			fields.each(function(i, field) {
+				var fieldName = $(field).find(".constraint_field_name").text();
+
+				$(field).find(".constraint_value").each(function(j, fieldValue) {
+					var encoded = getConstraintValueEncoded($(fieldValue));
+					
+					var inputElement = $('<input type="hidden" />');
+					inputElement.attr('name', fieldName);
+					inputElement.val(encoded);
+					
+					hiddenForm.append(inputElement);
+				});
+			});
 		}
 	</script>	
 		
