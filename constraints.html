@@ -21,6 +21,9 @@ addConstraint:
 
 	<div id="addField">xxxxxxxxx</div>
 	<div id="functions"></div><div id="inputs"></div>
+	
+	<button id="encodeConstraintsButton" value="Display Constraints" />
+	
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 	<script type="text/javascript" src="constraints.js"></script>
 	<script type="text/javascript" src="mustache.js"></script>
@@ -38,6 +41,10 @@ addConstraint:
 				
 				addConstraint(fieldName, "eq", "");
 			}
+		});
+		
+		$('#encodeConstraintsButton').click(function() {
+			console.log($.param(encodeConstraints(),true));
 		});
 	</script>
 </body>

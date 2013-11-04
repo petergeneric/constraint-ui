@@ -95,6 +95,21 @@ function renderInput(fieldName,functionName, argument) {
 	}
 }
 
+
+function encodeInputs(inputsSpan, functionName, fieldName) {
+	var schema = constraintSchema[fieldName];
+	
+	// TODO needs to be modified when intelligently rendering inputs based on data type
+	
+	if (functionName == "eq" || functionName == "neq" || functionName == "startsWith" || functionName == "contains") {
+		return $(inputsSpan).find('input[name="value"]').val();
+	}
+	else if (functionName == 'range') {
+		return $(inputsSpan).find('input[name="from"]').val() + '..' + $(inputsSpan).find('input[name="to"]').val();
+	}
+}
+
+
 function renderSkeletonField(fieldName) {
 	return '<li data-field-name="' + fieldName +'">' + fieldName + ' matches any of:<ul></ul></li>';
 }
@@ -108,16 +123,56 @@ function constraintFunctionChange() {
 
 function setConstraintFunction(constraintLI, functionName, argument) {
 	var fieldName = $(constraintLI).closest("[data-field-name]").data("field-name");
-	var functionSelect = $(constraintLI).find("select:first")
+	var functionSelect = $(constraintLI).find("select:first");
 	var inputsSpan = $(constraintLI).find("span.inputs");
 	
 	functionSelect.val(functionName);
 	inputsSpan.html(renderInput(fieldName, functionName, argument));
 }
 
+function encodeConstraint(fieldName, constraintLI) {
+	var functionSelect = $(constraintLI).find("select:first");
+	var inputsSpan = $(constraintLI).find("span.inputs");
+	
+	var functionName = functionSelect.val();
+	
+	if (functionName == 'isNull')
+		return '_null';
+	else if (functionName == 'isNotNull')
+		return '_notnull';
+	else {
+		var encodedValue = encodeInputs(inputsSpan, functionName, fieldName);
+		
+		// For eq, as long as the value doesn't begin with _ we can use a simpler notation
+		if (functionName == 'eq' && encodedValue.charAt(0) != '_')
+			return encodedValue;
+		else
+			return '_f_' + functionName + '_' + encodedValue;
+	}
+}
+
+function encodeConstraints() {
+	var encoded = {};
+	$('#constraintui > li[data-field-name]').each(function() {
+		var fieldName = $(this).data("field-name");	
+		
+		var values = [];
+		
+		$(this).find("li").each(function() {
+			console.log("Encode " + fieldName,$(this));
+			values[values.length] = encodeConstraint(fieldName, $(this));
+		});
+		
+		encoded[fieldName] = values;
+	});
+	
+	return encoded;
+}
+
 function addConstraint(fieldName, functionName, argument) {
 	// Default the function name
-	if (functionName == null) functionName='eq';
+	if (functionName == null)
+		functionName = 'eq';
 	
 	// TODO figure out if we have a field already. If we do already when skip the addition of the field entry
 	var existingField = $("#constraintui li[data-field-name='"+fieldName+"']");
@@ -136,12 +191,9 @@ function addConstraint(fieldName, functionName, argument) {
 		setConstraintFunction(functionSelect.parent(), functionName, argument);
 	}
 	else {
-		// TODO find the location to add the new inputs
 		$("#constraintui").append(renderSkeletonField(fieldName));
 		
 		addConstraint(fieldName,functionName,argument);
 		return;
 	}
-	
-	renderFunctions(getFunctions(fieldName))
 }
