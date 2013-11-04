@@ -1,99 +1,46 @@
 <html>
-<head>
-<style>
-	li.constraint_ui_prototype {
-		display: none;
-	}
-
-	/* Hide UI debug elements */	
-	.debug_el {
-		display: none;
-	}
-	
-	/* Hide the element containing form fields */
-	li.constraint_form_fields {
-		display: none;
-	}
-</style>
-</head>
+<head></head>
 <body>
 
-<form method="get" class="constraint_list">
-All of:
-<ul>
-	<!-- UI prototypes -->
-	<li class="constraint_ui_prototype">
-		<ul>
-			<!-- Prototype constraint value - goes inside a constraint_field/ul/li before li.constraint_field_add -->
-			<li class="prototype_constraint_value">
-				<select class="constraint_function">
-					<option value="eq">equals</option>
-					<option value="notnull">is present</option>
-					<option value="isnull">is not present</option>
-					<option value="contains">contains</option>
-					<option value="range">range</option>
-				</select>
-				
-				<span class="constraint_value_inputs">...</span>
-				
-				<a class="debug_el debug_constraint_value_display_encoded" href="#">display encoded</a>
-				<a class="debug_el debug_constraint_value_set_encoded" href="#">set encoded</a>
-				<a class="constraint_value_remove" href="#">remove</a>
-			</li>
-			
-			<!-- Prototype constraint field -->
-			<li class="prototype_constraint_field"><span class="constraint_field_name">field.name</span> is one of: <a class="constraint_remove" href="#">remove</a>
-				<ul>
-					<li class="constraint_value_add"><a class="constraint_value_add" href="#">add</a></li>
-				</ul>
-			</li>
-			<li class="prototype_constraint_input_eq">
-				<input class="constraint_param" type="text" value="" placeholder="Value" />
-			</li>
-			
-			<li class="prototype_constraint_input_range">
-				<input class="constraint_param_low" type="text" value="" placeholder="Lowest" /> - <input class="constraint_param_high" type="text" value="" placeholder="Highest" />
-			</li>
-		</ul>
-	</li>
-	
-	<!-- Add constraint link -->
-	<li class="constraint_add">
-		Add constraint:
-		
-		<!-- Populate this with the value fields. Currently takes only the field names but could also take datatype -->
-		<select class="constraint_add">
-			<option selected value=""></option>
-			<option value="some.constraint">some.constraint</option>
-			<option value="some.other.constraint">some.other.constraint</option>
-			<option value="id">id</option>
-			<option value="name">name</option>
-			<option value="version">version</option>
-		</select>
-		
-		<a href="#" class="debug_el debug_constraint_decode_all">decode from hidden form</a>
-	</li>
-	
-	<!-- Where the hidden form fields will be placed -->
-	<li class="constraint_form_fields">
-		<input type="hidden" name="id" value="_null" />
-		<input type="hidden" name="id" value="_notnull" />
-		<input type="hidden" name="id" value="_f_range_1..10" />
-		<input type="hidden" name="some.constraint" value="_f_range_20..30" />
-		<input type="hidden" name="some.constraint" value="xyz" />
-	</li>
+<ul id="constraintui">
 </ul>
 
-	<input class="constraint_search_submit" type="submit" value="Search" />
-</form>
+<pre style="display: none;">
+addProperty("id")
+addConstraint("id", "eq", "abc")
 
+addConstraint:
+ - Look for li with data-property-name="id"
+  - If one exists, add a new ul/li
+  - Otherwise, add a new base li
+  - Add a select function
+  - select.changed(function to change the inputs)
+  - call 
+ - Add a new ul/li 
+</pre>
 
-	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js"></script>
+	<div id="addField">xxxxxxxxx</div>
+	<div id="functions"></div><div id="inputs"></div>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 	<script type="text/javascript" src="constraints.js"></script>
+	<script type="text/javascript" src="mustache.js"></script>
 	
 	<!-- Initialise the constraints logic on any .constraint_list element -->
 	<script type="text/javascript">
-		constraints_init($(".constraint_list"));
+		/* Need to add a click handler to this*/
+		$("#addField").html(renderAddField());
+		$("#addField select.constraint_add_field").change(function() {
+			var fieldName = $(this).val();
+			
+			if (fieldName != '') {
+				/* De-select ready for next use */
+				$(this).val('');
+				
+				addConstraint(fieldName, "eq", "");
+			}
+		});
+		/*$("#functions").html(renderFunctions(getFunctions("id")));
+		$("#inputs").html(renderInput("id","range","123"));*/
 	</script>
 </body>
 </html>
