@@ -37,18 +37,30 @@ function renderAddField() {
 	return Mustache.render('<select class="constraint_add_field"><option value=""></option>{{#ids}}<option value="{{.}}">{{.}}</option>{{/ids}}</select>', obj);
 }
 
-function getFunctions(columnName) {
-	// TODO filter intelligently based on schema
-	return { functions: [
-		{name: "eq", text: "Is"},
-		{name: "neq", text: "Is Not"},
-		{name: "isNull", text: "Is Not Present"},
-		{name: "isNotNull", text: "Is Present"},
-		{name: "range", text: "Between"},
-		{name: "startsWith", text: "Starts With"},
-		{name: "contains", text: "Contains"}
-		]
-	};
+function getFunctions(fieldName) {
+	var schema = constraintSchema[fieldName];
+	
+	var functions = [];
+	
+	// Always allow eq and neq
+	functions[functions.length] = {name: "eq", text: "Is"};
+	functions[functions.length] = {name: "neq", text: "Is Not"};
+	
+	if (schema.nullable == true) {
+		functions[functions.length] = {name: "isNull", text: "Is Not Present"};
+		functions[functions.length] = {name: "isNotNull", text: "Is Present"};
+	}
+	
+	if (schema.type == 'string') {
+		functions[functions.length] = {name: "startsWith", text: "Starts With"};
+		functions[functions.length] = {name: "contains", text: "Contains"};
+	}
+	
+	if (schema.type == 'number' || schema.type == 'datetime' || schema.type == 'string') {
+		functions[functions.length] = {name: "range", text: "Between"};
+	}
+	
+	return { 'functions': functions};
 }
 
 function renderFunctions(functionDefs) {
@@ -56,9 +68,16 @@ function renderFunctions(functionDefs) {
 }
 
 //	returns HTML elements for the provided function (optionally with the default values filled in from argument)
-function renderInput(columnName,functionName, argument) {
+function renderInput(fieldName,functionName, argument) {
+	var schema = constraintSchema[fieldName];
+	
 	// TODO render intelligently based on data type
 	if (functionName == "eq" || functionName == "neq" || functionName == "startsWith" || functionName == "contains") {
+		// TODO if schema.type == 'enum' then generate a select
+		// TODO if schema.type == 'number' then generate input with type=number
+		// TODO if schema.type == string then generate input with type=string
+		// TODO if schema.type == datetime then generate a datetime picker
+		// TODO if schema.type == boolean then generate an enum of yes/no (or a checkbox?)
 		var args={value: argument};
 		return Mustache.render('<input name="value" type="text" value="{{value}}" />', args);
 	}
@@ -70,6 +89,9 @@ function renderInput(columnName,functionName, argument) {
 	}
 	else if (functionName == "isNull" || functionName == "isNotNull") {
 		return "";
+	}
+	else {
+		alert("Unknown function: " + functionName + "!");
 	}
 }
 
@@ -108,7 +130,6 @@ function addConstraint(fieldName, functionName, argument) {
 		
 		var functionSelect = constraintUL.find("li:last > select:first");
 		
-		console.log("Found function select",functionSelect);
 		functionSelect.change(constraintFunctionChange);
 
 		// set the default value		
