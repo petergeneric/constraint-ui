@@ -78,14 +78,14 @@ function renderInput(fieldName,functionName, argument) {
 		// TODO if schema.type == string then generate input with type=string
 		// TODO if schema.type == datetime then generate a datetime picker
 		// TODO if schema.type == boolean then generate an enum of yes/no (or a checkbox?)
-		var args={value: argument};
-		return Mustache.render('<input name="value" type="text" value="{{value}}" />', args);
+		var args={value: argument, inputType: (schema.type == 'number') ? "number" : "text"};
+		return Mustache.render('<input name="value" type="{{inputType}}" value="{{value}}" />', args);
 	}
 	else if (functionName == "range") {
 		// TODO split argument on ..
 		// TODO special-case empty string
-		var args={from:"a",to:"b"}
-		return Mustache.render('<input name="from" type="text" value="{{from}}" /> <input name="to" type="text" value="{{to}}" />',args);
+		var args={from:"a",to:"b", inputType: (schema.type == 'number') ? "number" : "text"}
+		return Mustache.render('<input name="from" type="{{inputType}}" value="{{from}}" /> <input name="to" type="{{inputType}}" value="{{to}}" />',args);
 	}
 	else if (functionName == "isNull" || functionName == "isNotNull") {
 		return "";
