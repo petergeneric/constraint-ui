@@ -45,6 +45,7 @@ addConstraint:
 		
 		$('#encodeConstraintsButton').click(function() {
 			console.log($.param(encodeConstraints(),true));
+			window.location = window.location + "?" + $.param(encodeConstraints(),true);
 		});
 	</script>
 </body>

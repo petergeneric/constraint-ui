@@ -82,9 +82,11 @@ function renderInput(fieldName,functionName, argument) {
 		return Mustache.render('<input name="value" type="{{inputType}}" value="{{value}}" />', args);
 	}
 	else if (functionName == "range") {
-		// TODO split argument on ..
-		// TODO special-case empty string
-		var args={from:"a",to:"b", inputType: (schema.type == 'number') ? "number" : "text"}
+		if (argument == "")
+			argument="..";
+			
+		var fields = argument.split("..",2);
+		var args={from:fields[0],to:fields[1], inputType: (schema.type == 'number') ? "number" : "text"}
 		return Mustache.render('<input name="from" type="{{inputType}}" value="{{from}}" /> <input name="to" type="{{inputType}}" value="{{to}}" />',args);
 	}
 	else if (functionName == "isNull" || functionName == "isNotNull") {
@@ -169,7 +171,37 @@ function encodeConstraints() {
 	return encoded;
 }
 
+function addConstraint(fieldName, encoded) {
+	
+	if (encoded.startsWith("_f_")) {
+		var fields = encoded.split("_", 1);
+		
+		addConstraint(fieldName, fields[2], fields[3]);
+	}
+	else {
+		addConstraint(fieldName, null, argument);
+	}
+}
+
 function addConstraint(fieldName, functionName, argument) {
+	if (argument === undefined && functionName != null) {
+		console.log("Decode " + functionName);
+		var encoded = functionName;
+		
+		if (encoded.startsWith("_f_")) {
+			var fields = encoded.split("_", 4);
+			
+			console.log("Decoding:", fields);
+		
+			functionName= fields[2];
+			argument = fields[3];
+		}
+		else {
+			functionName = null;
+			argument = encoded;
+		}
+	}
+	
 	// Default the function name
 	if (functionName == null)
 		functionName = 'eq';
@@ -187,13 +219,12 @@ function addConstraint(fieldName, functionName, argument) {
 		
 		functionSelect.change(constraintFunctionChange);
 
-		// set the default value		
+		// set the default value
 		setConstraintFunction(functionSelect.parent(), functionName, argument);
 	}
 	else {
 		$("#constraintui").append(renderSkeletonField(fieldName));
 		
 		addConstraint(fieldName,functionName,argument);
-		return;
 	}
 }
