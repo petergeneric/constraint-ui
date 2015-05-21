@@ -15,6 +15,7 @@ var constraintSchema = {
 	},
 	
 	'lastUpdated': {
+		caption: 'last updated',
 		type: 'datetime',
 		nullable: true
 	},
@@ -31,10 +32,17 @@ function renderAddField() {
 	var obj = {"ids": []};
 	
 	for (var key in constraintSchema) {
-		obj["ids"][obj["ids"].length] = key;
+		var val;
+		
+		if ('caption' in constraintSchema[key])
+			val = constraintSchema[key].caption;
+		else
+			val = key;
+		
+		obj["ids"].push({'id':key,'caption':val});
 	}
 	
-	return Mustache.render('<select class="constraint_add_field"><option value=""></option>{{#ids}}<option value="{{.}}">{{.}}</option>{{/ids}}</select>', obj);
+	return Mustache.render('<select class="constraint_add_field"><option value=""></option>{{#ids}}<option value="{{id}}">{{caption}}</option>{{/ids}}</select>', obj);
 }
 
 function getFunctions(fieldName) {
@@ -82,7 +90,7 @@ function renderInput(fieldName,functionName, argument) {
 		return Mustache.render('<input name="value" type="{{inputType}}" value="{{value}}" />', args);
 	}
 	else if (functionName == "range") {
-		if (argument == "")
+		if (argument == "" || argument == null)
 			argument="..";
 			
 		var fields = argument.split("..",2);
