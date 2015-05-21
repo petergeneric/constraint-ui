@@ -3,6 +3,11 @@ var constraintSchema = {
 		type: 'number',
 		nullable: false
 	},
+	
+	'priority': {
+		type: 'number',
+		nullable: true,
+	},
 
 	'deprecated': {
 		type: 'boolean',
@@ -22,7 +27,7 @@ var constraintSchema = {
 
 	'state': {
 		type: 'enum',
-		values: ['ONE', 'TWO', 'THREE']
+		values: ['ONE', 'TWO', 'THREE', 'FAILED']
 	}
 }
 
@@ -49,6 +54,10 @@ function getFunctions(fieldName) {
 	var schema = constraintSchema[fieldName];
 	
 	var functions = [];
+	
+	if (schema === undefined || schema == null) {
+		throw "No such field: " + fieldName;
+	}
 	
 	// Always allow eq and neq
 	functions[functions.length] = {name: "eq", text: "Is"};
@@ -127,10 +136,6 @@ function encodeInputs(inputsSpan, functionName, fieldName) {
 }
 
 
-function renderSkeletonField(fieldName) {
-	return '<li data-field-name="' + fieldName +'">' + fieldName + ' matches any of:<ul></ul></li>';
-}
-
 function constraintFunctionChange() {
 	var constraintLI = $(this).closest("li");
 	var functionName = $(this).val();
@@ -181,9 +186,40 @@ function encodeConstraints() {
 		
 		encoded[fieldName] = values;
 	});
+
+	$('#constraintui > input.literal-constraint').each(function() {
+		var fieldName = $(this).attr('name');
+		
+		if (!(fieldName in encoded)) {
+			encoded[fieldName] = [];
+		}
+		
+		encoded[fieldName].push($(this).val());
+	});
 	
 	return encoded;
 }
+
+function decodeConstraints(encoded) {
+	// Remove all constraints
+	removeConstraints();
+	
+	// Add the encoded constraints
+	for (var key in encoded) {
+			var val = encoded[key];
+			
+			if (typeof val === 'string') {
+				addConstraint(key, val);
+			}
+			else {
+				for (var i in val) {
+					addConstraint(key, val[i]);
+				}
+			}
+	}
+}
+
+
 
 function addConstraint(fieldName, encoded) {
 	
@@ -217,25 +253,50 @@ function addConstraint(fieldName, functionName, argument) {
 	if (functionName == null)
 		functionName = 'eq';
 	
-	// TODO figure out if we have a field already. If we do already when skip the addition of the field entry
-	var existingField = $("#constraintui li[data-field-name='"+fieldName+"']");
-	
-	if (existingField.length != 0) {
-		// Find the UL
-		var constraintUL = $(existingField).find("ul");
-		
-		constraintUL.append('<li>' + renderFunctions(getFunctions(fieldName)) + '<span class="inputs" /></li>');
-		
-		var functionSelect = constraintUL.find("li:last > select:first");
-		
-		functionSelect.change(constraintFunctionChange);
-
-		// set the default value
-		setConstraintFunction(functionSelect.parent(), functionName, argument);
+	if (fieldName.startsWith("_")) {
+		$("#constraintui").append(Mustache.render('<input class="literal-constraint" type="hidden" name="{{name}}" value="{{value}}" />', {'name': fieldName, 'value': argument}));
 	}
 	else {
-		$("#constraintui").append(renderSkeletonField(fieldName));
+		// TODO figure out if we have a field already. If we do already when skip the addition of the field entry
+		var existingField = $("#constraintui li[data-field-name='"+fieldName+"']");
+	
+		if (existingField.length > 0) {
+			// Find the UL
+			var constraintUL = $(existingField).find("ul");
 		
-		addConstraint(fieldName,functionName,argument);
+			constraintUL.append('<li class="constraint-line">' + renderFunctions(getFunctions(fieldName)) + '<span class="inputs" /> <a class="constraint-line_remove" href="#" shape="rect">remove<i class="icon-remove-circle"></i></a></li>');
+		
+			var functionSelect = constraintUL.find("li:last > select:first");
+		
+			functionSelect.change(constraintFunctionChange);
+
+			// set the default value
+			setConstraintFunction(functionSelect.parent(), functionName, argument);
+			
+			constraintUL.find("a.constraint-line_remove").click(function() {
+				if ($(this).closest("li[data-field-name]").find("li.constraint-line").length == 1) {
+					// This was the last constraint, remove this field's entry
+					$(this).closest("li[data-field-name]").remove();
+				}
+				else {
+					// Remove only this constraint line
+					$(this).closest("li.constraint-line").remove();
+				}
+			});
+		}
+		else {
+			var skel = $('<li data-field-name="' + fieldName +'">' + fieldName + ' matches any of: <a class="constraint_remove" href="#" shape="rect">remove<i class="icon-remove"></i></a><ul></ul></li>');
+			$("#constraintui").append(skel);
+		
+			skel.find("a.constraint_remove").click(function() {
+				$(this).closest("li[data-field-name]").remove();
+			});
+		
+			addConstraint(fieldName,functionName,argument);
+		}
 	}
+}
+
+function removeConstraints() {
+	$("#constraintui").empty();
 }
