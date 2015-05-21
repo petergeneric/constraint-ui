@@ -80,28 +80,35 @@ function renderInput(fieldName,functionName, argument) {
 	var schema = constraintSchema[fieldName];
 	
 	// TODO render intelligently based on data type
-	if (functionName == "eq" || functionName == "neq" || functionName == "startsWith" || functionName == "contains") {
-		// TODO if schema.type == 'enum' then generate a select
-		// TODO if schema.type == 'number' then generate input with type=number
-		// TODO if schema.type == string then generate input with type=string
-		// TODO if schema.type == datetime then generate a datetime picker
-		// TODO if schema.type == boolean then generate an enum of yes/no (or a checkbox?)
-		var args={value: argument, inputType: (schema.type == 'number') ? "number" : "text"};
-		return Mustache.render('<input name="value" type="{{inputType}}" value="{{value}}" />', args);
-	}
-	else if (functionName == "range") {
-		if (argument == "" || argument == null)
-			argument="..";
+	
+	switch(functionName) {
+		case "eq":
+		case "neq":
+		case "startsWith":
+		case "contains":
+		case "gt":
+		case "ge":
+		case "lt":
+		case "le":
+			// TODO if schema.type == 'enum' then generate a select
+			// TODO if schema.type == 'number' then generate input with type=number
+			// TODO if schema.type == string then generate input with type=string
+			// TODO if schema.type == datetime then generate a datetime picker
+			// TODO if schema.type == boolean then generate an enum of yes/no (or a checkbox?)
+			var args={value: argument, inputType: (schema.type == 'number') ? "number" : "text"};
+			return Mustache.render('<input name="value" type="{{inputType}}" value="{{value}}" />', args);
+		case "range":
+			if (argument == "" || argument == null)
+				argument="..";
 			
-		var fields = argument.split("..",2);
-		var args={from:fields[0],to:fields[1], inputType: (schema.type == 'number') ? "number" : "text"}
-		return Mustache.render('<input name="from" type="{{inputType}}" value="{{from}}" /> <input name="to" type="{{inputType}}" value="{{to}}" />',args);
-	}
-	else if (functionName == "isNull" || functionName == "isNotNull") {
-		return "";
-	}
-	else {
-		alert("Unknown function: " + functionName + "!");
+			var fields = argument.split("..",2);
+			var args={from:fields[0],to:fields[1], inputType: (schema.type == 'number') ? "number" : "text"}
+			return Mustache.render('<input name="from" type="{{inputType}}" value="{{from}}" /> <input name="to" type="{{inputType}}" value="{{to}}" />',args);
+		case "isNull":
+		case "isNotNull":
+			return "";
+		default:
+			alert("Unknown function: " + functionName + "!");
 	}
 }
 
@@ -169,7 +176,6 @@ function encodeConstraints() {
 		var values = [];
 		
 		$(this).find("li").each(function() {
-			console.log("Encode " + fieldName,$(this));
 			values[values.length] = encodeConstraint(fieldName, $(this));
 		});
 		
@@ -193,14 +199,11 @@ function addConstraint(fieldName, encoded) {
 
 function addConstraint(fieldName, functionName, argument) {
 	if (argument === undefined && functionName != null) {
-		console.log("Decode " + functionName);
 		var encoded = functionName;
 		
 		if (encoded.startsWith("_f_")) {
 			var fields = encoded.split("_", 4);
 			
-			console.log("Decoding:", fields);
-		
 			functionName= fields[2];
 			argument = fields[3];
 		}
