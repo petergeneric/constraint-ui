@@ -19,10 +19,9 @@ addConstraint:
  - Add a new ul/li 
 </pre>
 
-	<div id="addField">xxxxxxxxx</div>
-	<div id="functions"></div><div id="inputs"></div>
+	<button id="encodeConstraintsButton">Display Constraints</button>
 	
-	<button id="encodeConstraintsButton" value="Display Constraints" />
+	<pre id="constraint-render"></pre>
 	
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 	<script type="text/javascript" src="constraints.js"></script>
@@ -30,22 +29,10 @@ addConstraint:
 	
 	<!-- Initialise the constraints logic on any .constraint_list element -->
 	<script type="text/javascript">
-		/* Need to add a click handler to this*/
-		$("#addField").html(renderAddField());
-		$("#addField select.constraint_add_field").change(function() {
-			var fieldName = $(this).val();
-			
-			if (fieldName != '') {
-				/* De-select ready for next use */
-				$(this).val('');
-				
-				addConstraint(fieldName, "eq", "");
-			}
-		});
+		constraints("#constraintui", constraintSchema);
 		
 		$('#encodeConstraintsButton').click(function() {
-			console.log($.param(encodeConstraints(),true));
-			window.location = window.location + "?" + $.param(encodeConstraints(),true);
+			$("#constraint-render").text($.param(constraints("#constraintui").encodeConstraints(),true));
 		});
 	</script>
 </body>

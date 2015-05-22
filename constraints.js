@@ -33,25 +33,84 @@ var constraintSchema = {
 
 var constraintMap = {'priority':['50'],'_limit':['200'],'state':['FAILED'],'_offset':['0']};
 
-function renderAddField() {
+
+function constraints(el, schema) {
+	if (el === undefined || el == null) {
+		throw "No element or element path provided for constraints UI!";
+	}
+	else {
+		var element = $(el);
+		var ui = element.data('constraints');
+		
+		if (ui === undefined) {
+			ui = new ConstraintUI(element, schema);
+			
+			element.data('constraints', ui);
+		}
+		
+		return ui;
+	}
+}
+
+function ConstraintUI(element, schema) {
+	var self = this;
+	
+	this.element = element;
+	this.schema = schema;
+	
+	element.append('<h3>Constraints</h3><ul class="constraint-list"><li>Add Constraint: <span class="field-add-ui"></span></li></ul> <br />  <h3>Order</h3><ul class="order-list"><li>Add order: <span class="field-add-ui"></span></li></ul></select>');
+	
+	this.constraintListElement = element.find("ul.constraint-list");
+	this.orderListElement = element.find("ul.order-list");
+	
+	// Populate constraint add UI
+	var constraintAddDiv = this.constraintListElement.find(".field-add-ui");
+	constraintAddDiv.html(this.renderFields());
+	constraintAddDiv.find("select.field-list").change(function() {
+		var fieldName = $(this).val();
+		
+		if (fieldName != '') {
+			/* De-select ready for next use */
+			$(this).val('');
+			
+			self.addConstraint(fieldName, "eq", "");
+		}
+	});
+	
+	// Populate add order UI
+	var orderAddDiv = this.orderListElement.find(".field-add-ui");
+	orderAddDiv.html(this.renderFields());
+	orderAddDiv.find("select.field-list").change(function() {
+		var fieldName = $(this).val();
+	
+		if (fieldName != '') {
+			/* De-select ready for next use */
+			$(this).val('');
+			
+			self.addOrder(fieldName);
+		}
+	});
+}
+
+ConstraintUI.prototype.renderFields = function(selection) {
 	var obj = {"ids": []};
 	
-	for (var key in constraintSchema) {
+	for (var key in this.schema) {
 		var val;
 		
-		if ('caption' in constraintSchema[key])
-			val = constraintSchema[key].caption;
+		if ('caption' in this.schema[key])
+			val = this.schema[key].caption;
 		else
 			val = key;
 		
-		obj["ids"].push({'id':key,'caption':val});
+		obj["ids"].push({'id':key,'caption':val, selected: (key == selection) ? 'selected="selected"' : '' });
 	}
 	
-	return Mustache.render('<select class="constraint_add_field"><option value=""></option>{{#ids}}<option value="{{id}}">{{caption}}</option>{{/ids}}</select>', obj);
+	return Mustache.render('<select class="field-list"><option value=""></option>{{#ids}}<option {{selected}} value="{{id}}">{{caption}}</option>{{/ids}}</select>', obj);
 }
 
-function getFunctions(fieldName) {
-	var schema = constraintSchema[fieldName];
+ConstraintUI.prototype.getFunctions = function(fieldName) {
+	var schema = this.schema[fieldName];
 	
 	var functions = [];
 	
@@ -60,33 +119,37 @@ function getFunctions(fieldName) {
 	}
 	
 	// Always allow eq and neq
-	functions[functions.length] = {name: "eq", text: "Is"};
-	functions[functions.length] = {name: "neq", text: "Is Not"};
+	functions.push({name: "eq", text: "Is"});
+	functions.push({name: "neq", text: "Is Not"});
 	
 	if (schema.nullable == true) {
-		functions[functions.length] = {name: "isNull", text: "Is Not Present"};
-		functions[functions.length] = {name: "isNotNull", text: "Is Present"};
+		functions.push({name: "isNull", text: "Is Not Present"});
+		functions.push({name: "isNotNull", text: "Is Present"});
 	}
 	
 	if (schema.type == 'string') {
-		functions[functions.length] = {name: "startsWith", text: "Starts With"};
-		functions[functions.length] = {name: "contains", text: "Contains"};
+		functions.push({name: "startsWith", text: "Starts With"});
+		functions.push({name: "contains", text: "Contains"});
 	}
 	
 	if (schema.type == 'number' || schema.type == 'datetime' || schema.type == 'string') {
-		functions[functions.length] = {name: "range", text: "Between"};
+		functions.push({name: "range", text: "Between"});
+		functions.push({name: "gt", text: '>'});
+		functions.push({name: "lt", text: '<'});
+		functions.push({name: "ge", text: '>='});
+		functions.push({name: "le", text: '<='});
 	}
 	
 	return { 'functions': functions};
 }
 
-function renderFunctions(functionDefs) {
+ConstraintUI.prototype.renderFunctions = function(functionDefs) {
 	return Mustache.render('<select class="constraint_function"></option>{{#functions}}<option value="{{name}}">{{text}}</option>{{/functions}}</select>', functionDefs);
 }
 
 //	returns HTML elements for the provided function (optionally with the default values filled in from argument)
-function renderInput(fieldName,functionName, argument) {
-	var schema = constraintSchema[fieldName];
+ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) {
+	var schema = this.schema[fieldName];
 	
 	// TODO render intelligently based on data type
 	
@@ -99,19 +162,28 @@ function renderInput(fieldName,functionName, argument) {
 		case "ge":
 		case "lt":
 		case "le":
-			// TODO if schema.type == 'enum' then generate a select
-			// TODO if schema.type == 'number' then generate input with type=number
-			// TODO if schema.type == string then generate input with type=string
-			// TODO if schema.type == datetime then generate a datetime picker
-			// TODO if schema.type == boolean then generate an enum of yes/no (or a checkbox?)
-			var args={value: argument, inputType: (schema.type == 'number') ? "number" : "text"};
-			return Mustache.render('<input name="value" type="{{inputType}}" value="{{value}}" />', args);
+			// TODO implement some date/time picker logic for datetime fields?
+			if (schema.type == 'enum' || schema.type == 'boolean') {
+				var args = {value: argument, selected: function() { if (this == argument) return 'selected="selected"'; else return ''; }};
+				if (schema.type == 'boolean') {
+					args.options = ['true', 'false'];
+				}
+				else {
+					args.options = schema.values;
+				}
+				
+				return Mustache.render('<select name="value" type="{{inputType}}" value="{{value}}">{{#options}}<option {{selected}}>{{.}}</option>{{/options}}</select>', args);
+			}
+			else {
+				var args={value: argument, inputType: (schema.type == 'number') ? "number" : "text"};
+				return Mustache.render('<input name="value" type="{{inputType}}" value="{{value}}" />', args);
+			}
 		case "range":
 			if (argument == "" || argument == null)
 				argument="..";
 			
 			var fields = argument.split("..",2);
-			var args={from:fields[0],to:fields[1], inputType: (schema.type == 'number') ? "number" : "text"}
+			var args={from:fields[0],to:fields[1], inputType: "text"}
 			return Mustache.render('<input name="from" type="{{inputType}}" value="{{from}}" /> <input name="to" type="{{inputType}}" value="{{to}}" />',args);
 		case "isNull":
 		case "isNotNull":
@@ -122,37 +194,38 @@ function renderInput(fieldName,functionName, argument) {
 }
 
 
-function encodeInputs(inputsSpan, functionName, fieldName) {
-	var schema = constraintSchema[fieldName];
+ConstraintUI.prototype.encodeInputs = function(inputsSpan, functionName, fieldName) {
+	var schema = this.schema[fieldName];
 	
 	// TODO needs to be modified when intelligently rendering inputs based on data type
-	
-	if (functionName == "eq" || functionName == "neq" || functionName == "startsWith" || functionName == "contains") {
-		return $(inputsSpan).find('input[name="value"]').val();
-	}
-	else if (functionName == 'range') {
-		return $(inputsSpan).find('input[name="from"]').val() + '..' + $(inputsSpan).find('input[name="to"]').val();
+
+	switch(functionName) {
+		case 'eq':
+		case 'neq':
+		case 'startsWith':
+		case 'contains':
+		case 'gt':
+		case 'lt':
+		case 'ge':
+		case 'le':
+			return $(inputsSpan).find('input[name="value"], select[name="value"]').val();
+		case 'range':
+			return $(inputsSpan).find('input[name="from"]').val() + '..' + $(inputsSpan).find('input[name="to"]').val();
+		default:
+			throw "Do not know how to extract value for function: " + functionName + " and field " + fieldName;
 	}
 }
 
-
-function constraintFunctionChange() {
-	var constraintLI = $(this).closest("li");
-	var functionName = $(this).val();
-	
-	setConstraintFunction(constraintLI, functionName, "");
-}
-
-function setConstraintFunction(constraintLI, functionName, argument) {
+ConstraintUI.prototype.setConstraintFunction = function(constraintLI, functionName, argument) {
 	var fieldName = $(constraintLI).closest("[data-field-name]").data("field-name");
 	var functionSelect = $(constraintLI).find("select:first");
 	var inputsSpan = $(constraintLI).find("span.inputs");
 	
 	functionSelect.val(functionName);
-	inputsSpan.html(renderInput(fieldName, functionName, argument));
+	inputsSpan.html(this.renderInput(fieldName, functionName, argument));
 }
 
-function encodeConstraint(fieldName, constraintLI) {
+ConstraintUI.prototype.encodeConstraint = function(fieldName, constraintLI) {
 	var functionSelect = $(constraintLI).find("select:first");
 	var inputsSpan = $(constraintLI).find("span.inputs");
 	
@@ -163,7 +236,7 @@ function encodeConstraint(fieldName, constraintLI) {
 	else if (functionName == 'isNotNull')
 		return '_notnull';
 	else {
-		var encodedValue = encodeInputs(inputsSpan, functionName, fieldName);
+		var encodedValue = this.encodeInputs(inputsSpan, functionName, fieldName);
 		
 		// For eq, as long as the value doesn't begin with _ we can use a simpler notation
 		if (functionName == 'eq' && encodedValue.charAt(0) != '_')
@@ -173,21 +246,30 @@ function encodeConstraint(fieldName, constraintLI) {
 	}
 }
 
-function encodeConstraints() {
+ConstraintUI.prototype.encodeOrder = function(orderLI) {
+	var fieldName = $(orderLI).find("select.field-list").val();
+	var direction = $(orderLI).find("select[name=direction]").val();
+	
+	return fieldName + ' ' + direction;
+}
+
+ConstraintUI.prototype.encodeConstraints = function() {
+	var self = this;
+	
 	var encoded = {};
-	$('#constraintui > li[data-field-name]').each(function() {
+	this.constraintListElement.find('li[data-field-name]').each(function() {
 		var fieldName = $(this).data("field-name");	
 		
 		var values = [];
 		
 		$(this).find("li").each(function() {
-			values[values.length] = encodeConstraint(fieldName, $(this));
+			values[values.length] = self.encodeConstraint(fieldName, $(this));
 		});
 		
 		encoded[fieldName] = values;
 	});
 
-	$('#constraintui > input.literal-constraint').each(function() {
+	this.constraintListElement.find('input.literal-constraint').each(function() {
 		var fieldName = $(this).attr('name');
 		
 		if (!(fieldName in encoded)) {
@@ -197,43 +279,68 @@ function encodeConstraints() {
 		encoded[fieldName].push($(this).val());
 	});
 	
+	this.orderListElement.find("li.order-line").each(function() {
+		if (!( '_order' in encoded)) {
+			encoded['_order'] = [];
+		}
+		
+		encoded['_order'].push(self.encodeOrder(this));
+	});
+	
 	return encoded;
 }
 
-function decodeConstraints(encoded) {
+ConstraintUI.prototype.decodeConstraints = function(encoded) {
 	// Remove all constraints
-	removeConstraints();
+	this.clear();
 	
 	// Add the encoded constraints
 	for (var key in encoded) {
 			var val = encoded[key];
 			
 			if (typeof val === 'string') {
-				addConstraint(key, val);
+				this.addConstraint(key, val);
 			}
 			else {
 				for (var i in val) {
-					addConstraint(key, val[i]);
+					this.addConstraint(key, val[i]);
 				}
 			}
 	}
 }
 
-
-
-function addConstraint(fieldName, encoded) {
-	
-	if (encoded.startsWith("_f_")) {
-		var fields = encoded.split("_", 1);
-		
-		addConstraint(fieldName, fields[2], fields[3]);
+ConstraintUI.prototype.addOrder = function(fieldName, direction) {
+	if (direction === undefined || direction == null) {
+		direction = "asc";
 	}
-	else {
-		addConstraint(fieldName, null, argument);
+	
+	var existingElement = this.orderListElement.find('li.order-line > select.field-list').filter(function(i,e) {
+		return ($(e).val() == fieldName);
+	});
+	
+	var alreadyExists = existingElement.length > 0;
+	
+	if (!alreadyExists) {
+		var insertionPoint = this.orderListElement.find("li:last-child");
+
+		var ascDescSelect;
+		{	
+			var args = {options: ['asc', 'desc'], selected: function() { if (this == direction) return 'selected="selected"'; else return ''; }};
+		
+			ascDescSelect = Mustache.render('<select name="direction">{{#options}}<option {{selected}}>{{.}}</option>{{/options}}</select>', args);
+		}
+	
+		var el = $('<li class="order-line">' + this.renderFields(fieldName) + ' ' + ascDescSelect + '<a class="order-line_remove" href="#" shape="rect">remove<i class="icon-remove-circle"></i></a></li>');
+		
+		el.find("a.order-line_remove").click(function() {
+			$(this).closest("li.order-line").remove();
+		});
+		
+		el.insertBefore(insertionPoint);
 	}
 }
 
-function addConstraint(fieldName, functionName, argument) {
+ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argument) {
 	if (argument === undefined && functionName != null) {
 		var encoded = functionName;
 		
@@ -254,24 +361,39 @@ function addConstraint(fieldName, functionName, argument) {
 		functionName = 'eq';
 	
 	if (fieldName.startsWith("_")) {
-		$("#constraintui").append(Mustache.render('<input class="literal-constraint" type="hidden" name="{{name}}" value="{{value}}" />', {'name': fieldName, 'value': argument}));
+		if (fieldName == '_order') {
+			// Call the addOrder logic
+			var fields = argument.split(" ", 2);
+			
+			this.addOrder(fields[0], fields[1]);
+		}
+		else {
+			// Carry it as a literal field
+			this.constraintListElement.append(Mustache.render('<input class="literal-constraint" type="hidden" name="{{name}}" value="{{value}}" />', {'name': fieldName, 'value': argument}));
+		}
 	}
 	else {
 		// TODO figure out if we have a field already. If we do already when skip the addition of the field entry
-		var existingField = $("#constraintui li[data-field-name='"+fieldName+"']");
+		var existingField = this.constraintListElement.find("li[data-field-name='"+fieldName+"']");
 	
 		if (existingField.length > 0) {
 			// Find the UL
 			var constraintUL = $(existingField).find("ul");
 		
-			constraintUL.append('<li class="constraint-line">' + renderFunctions(getFunctions(fieldName)) + '<span class="inputs" /> <a class="constraint-line_remove" href="#" shape="rect">remove<i class="icon-remove-circle"></i></a></li>');
+			constraintUL.append('<li class="constraint-line">' + this.renderFunctions(this.getFunctions(fieldName)) + '<span class="inputs" /> <a class="constraint-line_remove" href="#" shape="rect">remove<i class="icon-remove-circle"></i></a></li>');
 		
 			var functionSelect = constraintUL.find("li:last > select:first");
 		
-			functionSelect.change(constraintFunctionChange);
+			var self = this;
+			functionSelect.change(function() {
+				var constraintLI = $(this).closest("li");
+				var functionName = $(this).val();
+	
+				self.setConstraintFunction(constraintLI, functionName, "");
+			});
 
 			// set the default value
-			setConstraintFunction(functionSelect.parent(), functionName, argument);
+			this.setConstraintFunction(functionSelect.parent(), functionName, argument);
 			
 			constraintUL.find("a.constraint-line_remove").click(function() {
 				if ($(this).closest("li[data-field-name]").find("li.constraint-line").length == 1) {
@@ -286,17 +408,18 @@ function addConstraint(fieldName, functionName, argument) {
 		}
 		else {
 			var skel = $('<li data-field-name="' + fieldName +'">' + fieldName + ' matches any of: <a class="constraint_remove" href="#" shape="rect">remove<i class="icon-remove"></i></a><ul></ul></li>');
-			$("#constraintui").append(skel);
+			this.constraintListElement.prepend(skel);
 		
 			skel.find("a.constraint_remove").click(function() {
 				$(this).closest("li[data-field-name]").remove();
 			});
 		
-			addConstraint(fieldName,functionName,argument);
+			this.addConstraint(fieldName,functionName,argument);
 		}
 	}
 }
 
-function removeConstraints() {
-	$("#constraintui").empty();
+ConstraintUI.prototype.clear = function() {
+	this.constraintListElement.find("li[data-field-name]").remove();
+	this.orderListElement.find("li.order-line").remove();
 }
