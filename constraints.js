@@ -22,7 +22,7 @@ function ConstraintUI(element, schema) {
 	this.element = element;
 	this.schema = schema;
 	
-	element.append('<h3>Constraints</h3><ul class="constraint-list"><li>Add Constraint: <span class="field-add-ui"></span></li></ul> <br />  <h3>Order</h3><ul class="order-list"><li>Add order: <span class="field-add-ui"></span></li></ul></select>');
+	element.append('<h3>Constraints</h3><ul class="constraint-list"><li>Add Field: <span class="field-add-ui"></span></li></ul> <br />  <h3>Order</h3><ul class="order-list"><li>Add order: <span class="field-add-ui"></span></li></ul></select>');
 	
 	this.constraintListElement = element.find("ul.constraint-list");
 	this.orderListElement = element.find("ul.order-list");
@@ -278,12 +278,16 @@ ConstraintUI.prototype.encodeConstraints = function() {
 
 	this.constraintListElement.find('input.literal-constraint').each(function() {
 		var fieldName = $(this).attr('name');
+		var value = $(this).val();
+		
+		if (fieldName === '_offset' && value == 0)
+			return; // Don't encode an offset of 0
 		
 		if (!(fieldName in encoded)) {
 			encoded[fieldName] = [];
 		}
 		
-		encoded[fieldName].push($(this).val());
+		encoded[fieldName].push(value);
 	});
 	
 	this.orderListElement.find("li.order-line").each(function() {
