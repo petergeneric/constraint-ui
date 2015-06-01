@@ -170,7 +170,38 @@ ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) 
 		schema = {};
 	}
 	
-	// TODO render intelligently based on data type
+	// Applies numeric validation to an input
+	var ensureNumeric = function(input) {
+		input.attr('required', true);
+		input.attr('pattern', '(min|max|[0-9]+(\.[0-9]+)?)');
+	}
+
+	// Applies date validation to an input
+	// This only approximates a valid date/time - the server will perform full validation on submit
+	var ensureDate = function(input) {
+		input.attr('required', true);
+		
+		// Year - Month - Day
+		var date = '[0-9]{4}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])'
+		var time = '[0-9]{2}:[0-9]{2}:[0-6][0-9]?(\.[0-9]{1,4})?';
+		var timezone = '(|Z|[\-+][0-9:]+)'; // Approximate a valid timezone
+		
+		var datetime = date + '(T'+ time + timezone + ')?';
+		
+		// Allow period to be case insensitive
+		// N.B. this only approximates an ISO8601 duration
+		var period = '[Pp](([0-9]+[YMWDymwd])+$|([0-9]+[YMWDymwd])*[Tt]([0-9\.]+[HMShms])+$)';
+		
+		// Exact datetime OR an expression. In expressions space and plus are treated identically
+		input.attr('pattern', '^('+datetime+'|(now|today|tomorrow|yesterday|sow)([ \-+]'+ period + ')?)$');
+	}
+	
+	var addValidation = function(dataType, input) {
+		if (dataType == 'number')
+			ensureNumeric(input);
+		else if (dataType == 'datetime')
+			ensureDate(input);
+	}
 	
 	switch(functionName) {
 		case "eq":
@@ -202,8 +233,11 @@ ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) 
 				return select;
 			}
 			else {
-				// N.B. number input types don't allow strings like "max" and "min"
-				return $('<input name="value" type="text" />').val(argument);
+				var input = $('<input name="value" type="text" />').val(argument);
+				
+				addValidation(schema.type, input);
+				
+				return input;
 			}
 		case "range":
 			if (argument == "" || argument == null)
@@ -212,6 +246,9 @@ ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) 
 			var fields = argument.split("..",2);			
 			var from = $('<input name="from" />').attr('type', 'text').val(fields[0]);
 			var to = $('<input name="to" />').attr('type', 'text').val(fields[1]);
+			
+			addValidation(schema.type, from);
+			addValidation(schema.type, to);
 			
 			return $('<span />').append(from).append(' - ').append(to);
 		case "isNull":
