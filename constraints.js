@@ -354,7 +354,7 @@ ConstraintUI.prototype.addOrder = function(fieldName, direction) {
 		// TODO customise how remove link is rendered?
 		var removeLink;
 		{
-			removeLink = $('<a class="order-line_remove" href="#" shape="rect">remove<i class="icon-remove-circle"></i></a>');		
+			removeLink = $('<a class="order-line_remove" href="#" shape="rect"><i class="icon-remove-circle"></i></a>');		
 			removeLink.click(function() {
 				$(this).closest("li.order-line").remove();
 			});
@@ -425,7 +425,7 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 			
 			constraintLineLI.append(functionSelect);
 
-			constraintLineLI.append($('<span class="inputs" /> <a class="constraint-line_remove" href="#" shape="rect">remove<i class="icon-remove-circle"></i></a>'));
+			constraintLineLI.append($('<span class="inputs" /> <a class="constraint-line_remove" href="#" shape="rect"><i class="icon-remove-circle"></i></a>'));
 		
 			var self = this;
 			functionSelect.change(function() {
@@ -453,11 +453,37 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 		}
 		else {
 			var caption = ('caption' in schema) ? schema.caption : fieldName;
-			var skel = $('<li data-field-name="' + fieldName +'">' + caption + ' matches any of: <a class="constraint_remove" href="#" shape="rect">remove<i class="icon-remove"></i></a><ul></ul></li>');
-			this.constraintListElement.prepend(skel);
+			var li = $('<li></li>');
+			
+			// N.B. using data('field-name', fieldName) breaks existingField selector!
+			li.attr('data-field-name', fieldName);
+			
+			li.append(caption + ' matches any of: ');
+			
+			var removeLink = $('<a class="constraint_remove" href="#" shape="rect"><i class="icon-remove"></i> Remove</a>');
+			var addLink = $('<a class="constraint_value_add" href="#" shape="rect" title="Add Constraint"><i class="icon-plus"></i> Add Constraint</a>');
+			
+			li.append(addLink);
+			li.append(' ');
+			li.append(removeLink);
+			
+			// Add empty UL for constraint lines
+			li.append($('<ul></ul>'));
+			
+			//var skel = $('<li data-field-name="' + fieldName +'"><span>' + caption + ' matches any of:</span><ul></ul></li>');
+			
+			// TODO append instead of prepend?
+			this.constraintListElement.prepend(li);
 		
-			skel.find("a.constraint_remove").click(function() {
+			removeLink.click(function() {
 				$(this).closest("li[data-field-name]").remove();
+			});
+			
+			var self = this;
+			addLink.click(function() {
+				var fieldName = $(this).closest("li[data-field-name]").data('field-name');
+				
+				self.addConstraint(fieldName);
 			});
 		
 			this.addConstraint(fieldName,functionName,argument);
