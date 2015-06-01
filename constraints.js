@@ -21,6 +21,7 @@ function constraints(el, schema) {
 function ConstraintUI(element, schema) {
 	this.element = element;
 	this.schema = schema;
+	this.allowUnknownFields = true;
 	
 	element.append('<h3>Constraints</h3><ul class="constraint-list"><li>Add Field: <span class="field-add-ui"></span></li></ul> <br />  <h3>Order</h3><ul class="order-list"><li>Add order: <span class="field-add-ui"></span></li></ul></select>');
 	
@@ -29,7 +30,7 @@ function ConstraintUI(element, schema) {
 	
 	// Populate constraint add UI
 	var constraintAddDiv = this.constraintListElement.find(".field-add-ui");
-	constraintAddDiv.append(this.renderFields());
+	constraintAddDiv.append(this.renderFields(null, true));
 	
 	var self = this;
 
@@ -46,7 +47,7 @@ function ConstraintUI(element, schema) {
 	
 	// Populate add order UI
 	var orderAddDiv = this.orderListElement.find(".field-add-ui");
-	orderAddDiv.html(this.renderFields());
+	orderAddDiv.html(this.renderFields(null, true));
 	orderAddDiv.find("select.field-list").change(function() {
 		var fieldName = $(this).val();
 	
@@ -64,11 +65,14 @@ function ConstraintUI(element, schema) {
 
 // Render a field list UI
 // Optionally with a selected field name
-ConstraintUI.prototype.renderFields = function(selection) {
+ConstraintUI.prototype.renderFields = function(selection, allowCustom) {
 	var select = $('<select class="field-list"><option value=""></option></select>');
 	
+	if (allowCustom === undefined)
+		allowCustom = false;
+	
 	for (var key in this.schema) {
-		var option = $('<option>');
+		var option = $('<option></option>');
 		if ('caption' in this.schema[key])
 			option.text(this.schema[key].caption);
 		else
@@ -80,6 +84,10 @@ ConstraintUI.prototype.renderFields = function(selection) {
 			option.prop('selected', true);
 		
 		select.append(option);
+	}
+	
+	if (allowCustom && this.allowUnknownFields) {
+		select.append($('<option></option>').text('<custom field>').val('_custom'));
 	}
 	
 	return select;
@@ -130,6 +138,15 @@ ConstraintUI.prototype.renderFunctions = function(fieldName) {
 	return select;
 }
 
+ConstraintUI.prototype.addDummyField = function(fieldName) {
+	if (!(fieldName in this.schema)) {
+		this.schema[fieldName] = {
+			type: 'string',
+			nullable: true
+		};
+	}
+}
+
 //	returns HTML elements for the provided function (optionally with the default values filled in from argument)
 ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) {
 
@@ -137,10 +154,21 @@ ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) 
 		throw "Must provide field name!";
 	else if (functionName === undefined || functionName === null)
 		throw "Must provide function!";
-	else if (!(fieldName in this.schema))
-		throw "Must provide valid field name!";
+	
+	// Either enforce that it must be a known field or dynamically add the unknown field
+	if (!(fieldName in this.schema)) {
+		if (this.allowUnknownFields)
+			this.addDummyField(fieldName);
+		else
+			throw "No such field with name: " + fieldName;
+	}
+
 
 	var schema = this.schema[fieldName];
+	
+	if (schema == null && this.allowUnknownFields) {
+		schema = {};
+	}
 	
 	// TODO render intelligently based on data type
 	
@@ -323,6 +351,12 @@ ConstraintUI.prototype.addOrder = function(fieldName, direction) {
 		direction = "asc";
 	}
 	
+	// If custom field name, prompt the user to supply it
+	if (fieldName == '_custom') {
+		fieldName = window.prompt("Please provide custom field name");
+		this.addDummyField(fieldName);
+	}
+	
 	var existingElement = this.orderListElement.find('li.order-line > select.field-list').filter(function(i,e) {
 		return ($(e).val() == fieldName);
 	});
@@ -388,6 +422,13 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 	if (functionName == null)
 		functionName = 'eq';
 	
+	// If custom field name, prompt the user to supply it
+	if (fieldName == '_custom') {
+		fieldName = window.prompt("Please provide custom field name");
+		
+		this.addDummyField(fieldName);
+	}
+	
 	if (fieldName.startsWith("_")) {
 		if (fieldName == '_order') {
 			// Call the addOrder logic
@@ -419,10 +460,14 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 		}
 	}
 	else {
-		// TODO auto-define unknown constraints?
-		if (!(fieldName in this.schema))
-			throw "No such field defined: " + fieldName;
-		
+		// Either enforce that it must be a known field or dynamically add the unknown field
+		if (!(fieldName in this.schema)) {
+			if(this.allowUnknownFields)
+				this.addDummyField(fieldName);
+			else
+				throw "No such field with name: " + fieldName;
+		}
+
 		var schema = this.schema[fieldName];
 	
 		// TODO figure out if we have a field already. If we do already when skip the addition of the field entry
