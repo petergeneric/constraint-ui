@@ -174,6 +174,7 @@ ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) 
 	var ensureNumeric = function(input) {
 		input.attr('required', true);
 		input.attr('pattern', '(min|max|[0-9]+(\.[0-9]+)?)');
+		input.attr('title', 'Expected: number, min or max)');
 	}
 
 	// Applies date validation to an input
@@ -190,10 +191,11 @@ ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) 
 		
 		// Allow period to be case insensitive
 		// N.B. this only approximates an ISO8601 duration
-		var period = '[Pp](([0-9]+[YMWDymwd])+$|([0-9]+[YMWDymwd])*[Tt]([0-9\.]+[HMShms])+$)';
+		var period = '[Pp](([0-9]+[YMWDymwd])+|([0-9]+[YMWDymwd])*[Tt]([0-9\.]+[HMShms])+)';
 		
 		// Exact datetime OR an expression. In expressions space and plus are treated identically
-		input.attr('pattern', '^('+datetime+'|(now|today|tomorrow|yesterday|sow)([ \-+]'+ period + ')?)$');
+		input.attr('pattern', '('+datetime+'|(now|today|tomorrow|yesterday|sow)([ \-+]'+ period + ')?)');
+		input.attr('title', 'Expected ISO8601 date, ISO8601 datetime or time expression (now, today, tomorrow, yesterday,sow, then optionally +/- ISO8601 period)');
 	}
 	
 	var addValidation = function(dataType, input) {
