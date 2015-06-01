@@ -195,29 +195,6 @@ ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) 
 	}
 }
 
-
-ConstraintUI.prototype.encodeInputs = function(inputsSpan, functionName, fieldName) {
-	var schema = this.schema[fieldName];
-	
-	// TODO needs to be modified when intelligently rendering inputs based on data type
-
-	switch(functionName) {
-		case 'eq':
-		case 'neq':
-		case 'startsWith':
-		case 'contains':
-		case 'gt':
-		case 'lt':
-		case 'ge':
-		case 'le':
-			return $(inputsSpan).find('input[name="value"], select[name="value"]').val();
-		case 'range':
-			return $(inputsSpan).find('input[name="from"]').val() + '..' + $(inputsSpan).find('input[name="to"]').val();
-		default:
-			throw "Do not know how to extract value for function: " + functionName + " and field " + fieldName;
-	}
-}
-
 ConstraintUI.prototype.setConstraintFunction = function(constraintLI, functionName, argument) {
 	var fieldName = $(constraintLI).closest("[data-field-name]").data("field-name");
 	var functionSelect = $(constraintLI).find("select:first");
@@ -232,27 +209,6 @@ ConstraintUI.prototype.setConstraintFunction = function(constraintLI, functionNa
 	inputsSpan.append(this.renderInput(fieldName, functionName, argument));
 }
 
-ConstraintUI.prototype.encodeConstraint = function(fieldName, constraintLI) {
-	var functionSelect = $(constraintLI).find("select:first");
-	var inputsSpan = $(constraintLI).find("span.inputs");
-	
-	var functionName = functionSelect.val();
-	
-	if (functionName == 'isNull')
-		return '_null';
-	else if (functionName == 'isNotNull')
-		return '_notnull';
-	else {
-		var encodedValue = this.encodeInputs(inputsSpan, functionName, fieldName);
-		
-		// For eq, as long as the value doesn't begin with _ we can use a simpler notation
-		if (functionName == 'eq' && encodedValue.charAt(0) != '_')
-			return encodedValue;
-		else
-			return '_f_' + functionName + '_' + encodedValue;
-	}
-}
-
 ConstraintUI.prototype.encodeOrder = function(orderLI) {
 	var fieldName = $(orderLI).find("select.field-list").val();
 	var direction = $(orderLI).find("select[name=direction]").val();
@@ -263,6 +219,50 @@ ConstraintUI.prototype.encodeOrder = function(orderLI) {
 ConstraintUI.prototype.encodeConstraints = function() {
 	var self = this;
 	
+	var encodeInputs = function(inputsSpan, functionName, fieldName) {
+		var schema = self.schema[fieldName];
+	
+		// TODO needs to be modified when intelligently rendering inputs based on data type
+
+		switch(functionName) {
+			case 'eq':
+			case 'neq':
+			case 'startsWith':
+			case 'contains':
+			case 'gt':
+			case 'lt':
+			case 'ge':
+			case 'le':
+				return $(inputsSpan).find('input[name="value"], select[name="value"]').val();
+			case 'range':
+				return $(inputsSpan).find('input[name="from"]').val() + '..' + $(inputsSpan).find('input[name="to"]').val();
+			default:
+				throw "Do not know how to extract value for function: " + functionName + " and field " + fieldName;
+		}
+	}
+	
+	var encodeConstraint = function(fieldName, constraintLI) {
+		var functionSelect = $(constraintLI).find("select:first");
+		var inputsSpan = $(constraintLI).find("span.inputs");
+	
+		var functionName = functionSelect.val();
+	
+		if (functionName == 'isNull')
+			return '_null';
+		else if (functionName == 'isNotNull')
+			return '_notnull';
+		else {
+			var encodedValue = encodeInputs(inputsSpan, functionName, fieldName);
+		
+			// For eq, as long as the value doesn't begin with _ we can use a simpler notation
+			if (functionName == 'eq' && encodedValue.charAt(0) != '_')
+				return encodedValue;
+			else
+				return '_f_' + functionName + '_' + encodedValue;
+		}
+	}
+
+	
 	var encoded = {};
 	this.constraintListElement.find('li[data-field-name]').each(function() {
 		var fieldName = $(this).data("field-name");	
@@ -270,10 +270,18 @@ ConstraintUI.prototype.encodeConstraints = function() {
 		var values = [];
 		
 		$(this).find("li").each(function() {
-			values[values.length] = self.encodeConstraint(fieldName, $(this));
+			values[values.length] = encodeConstraint(fieldName, $(this));
 		});
 		
 		encoded[fieldName] = values;
+	});
+
+	this.orderListElement.find("li.order-line").each(function() {
+		if (!( '_order' in encoded)) {
+			encoded['_order'] = [];
+		}
+		
+		encoded['_order'].push(self.encodeOrder(this));
 	});
 
 	this.constraintListElement.find('input.literal-constraint').each(function() {
@@ -288,14 +296,6 @@ ConstraintUI.prototype.encodeConstraints = function() {
 		}
 		
 		encoded[fieldName].push(value);
-	});
-	
-	this.orderListElement.find("li.order-line").each(function() {
-		if (!( '_order' in encoded)) {
-			encoded['_order'] = [];
-		}
-		
-		encoded['_order'].push(self.encodeOrder(this));
 	});
 	
 	return encoded;
@@ -398,6 +398,19 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 			this.addOrder(fields[0], fields[1]);
 		}
 		else {
+			// Special-case _offset and _limit fields, only allow at most one to exist
+			if (fieldName == '_offset' || fieldName == '_limit') {
+				
+				var existingInput = this.constraintListElement.find('input.literal-constraint[name="' + fieldName + '"]');
+				
+				// Field does not exist yet, fall back on addition of new literal constraint
+				
+				if (existingInput.length > 0) {
+					existingInput.val(argument);
+					return;
+				}
+			}
+			
 			// Carry it as a literal field
 			var input = $('<input class="literal-constraint" type="hidden" />');
 			
@@ -542,23 +555,36 @@ ConstraintUI.prototype.submit = function(method, endpoint) {
 }
 
 ConstraintUI.prototype.nextPage = function() {
-	var encoded = this.encodeConstraints();
-	
-	var offset = ('_offset' in encoded) ? encoded['_offset'] : 0;
-	var limit = ('_limit' in encoded) ? encoded['_limit'] : 200;
-	
-	addConstraint('_offset', offset + limit);
-	
-	this.submit();
+	this.pageDelta(1);
 }
 
 ConstraintUI.prototype.prevPage = function() {
+	this.pageDelta(-1);
+}
+
+ConstraintUI.prototype.pageDelta = function(delta) {
 	var encoded = this.encodeConstraints();
 	
 	var offset = ('_offset' in encoded) ? encoded['_offset'] : 0;
 	var limit = ('_limit' in encoded) ? encoded['_limit'] : 200;
 	
-	addConstraint('_offset', Math.max(0, offset - limit));
+	// Make sure we never go below zero (in the case of a negative delta)
+	var newOffset = Math.max(0, offset + (delta*limit));
+	
+	if (newOffset != offset) {
+		addConstraint('_offset', newOffset);
+		
+		this.submit();
+	}
+}
+
+ConstraintUI.prototype.page = function(num) {
+	if (num < 0)
+		throw "Page number must be positive integer";
+	
+	var encoded = this.encodeConstraints();
+	
+	addConstraint('_offset', limit * num);
 	
 	this.submit();
 }
