@@ -90,6 +90,9 @@ function ConstraintUI(element, schema) {
 			self.addOrder(fieldName);
 		}
 	});
+	
+	this.formMethod = 'GET';
+	this.formEndpoint = null;
 }
 
 ConstraintUI.prototype.renderFields = function(selection) {
@@ -422,12 +425,72 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 	}
 }
 
+// Dynamically build up a form and submit it
+// Optionally allows a method (e.g. GET/POST) to be supplied and an endpoint
+// If not specified then it defaults to a GET to the current URL
+ConstraintUI.prototype.submit = function(method, endpoint) {
+	var form = $("<form/>");
+	
+	// Allow method to be customised (default to GET)
+	if (method !== undefined)
+		form.attr('method', method);
+	else
+		form.attr('method', this.formMethod);
+	
+	// Allow endpoint to be customised
+	if (endpoint !== undefined)
+		form.attr('action', endpoint);
+	else if (this.formEndpoint !== null)
+		form.attr('action', this.formEndpoint);
+	
+	var constraints = this.encodeConstraints();
+
+	// Builds hidden input elements	
+	var inputFunction = function(name,value) {
+		return $("<input />").attr('type','hidden').attr('name', name).val(value);
+	};
+	
+	// Set up the inputs
+	for (var key in constraints) {
+		var value = constraints[key];
+		
+		if (typeof value === 'string') {
+			form.append(inputFunction(key, value));
+		}
+		else {
+			for (var i in value) {
+				form.append(inputFunction(key, value[i]));
+			}
+		}
+	}
+	
+	// Place the form on the page
+	form.appendTo(document.body);
+	
+	// Now submit the form
+	form.submit();
+}
+
 ConstraintUI.prototype.nextPage = function() {
-	// TODO set _offset = _offset + _limit
+	var encoded = this.encodeConstraints();
+	
+	var offset = ('_offset' in encoded) ? encoded['_offset'] : 0;
+	var limit = ('_limit' in encoded) ? encoded['_limit'] : 200;
+	
+	addConstraint('_offset', offset + limit);
+	
+	this.submit();
 }
 
 ConstraintUI.prototype.prevPage = function() {
-	// TODO set _offset = max(0, _offset - _limit)
+	var encoded = this.encodeConstraints();
+	
+	var offset = ('_offset' in encoded) ? encoded['_offset'] : 0;
+	var limit = ('_limit' in encoded) ? encoded['_limit'] : 200;
+	
+	addConstraint('_offset', Math.max(0, offset - limit));
+	
+	this.submit();
 }
 
 ConstraintUI.prototype.clear = function() {
