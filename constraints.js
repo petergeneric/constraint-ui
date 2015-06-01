@@ -373,6 +373,8 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 		}
 	}
 	else {
+		var schema = this.schema[fieldName];
+	
 		// TODO figure out if we have a field already. If we do already when skip the addition of the field entry
 		var existingField = this.constraintListElement.find("li[data-field-name='"+fieldName+"']");
 	
@@ -407,7 +409,8 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 			});
 		}
 		else {
-			var skel = $('<li data-field-name="' + fieldName +'">' + fieldName + ' matches any of: <a class="constraint_remove" href="#" shape="rect">remove<i class="icon-remove"></i></a><ul></ul></li>');
+			var caption = ('caption' in schema) ? schema.caption : fieldName;
+			var skel = $('<li data-field-name="' + fieldName +'">' + caption + ' matches any of: <a class="constraint_remove" href="#" shape="rect">remove<i class="icon-remove"></i></a><ul></ul></li>');
 			this.constraintListElement.prepend(skel);
 		
 			skel.find("a.constraint_remove").click(function() {
@@ -419,7 +422,25 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 	}
 }
 
+ConstraintUI.prototype.nextPage = function() {
+	// TODO set _offset = _offset + _limit
+}
+
+ConstraintUI.prototype.prevPage = function() {
+	// TODO set _offset = max(0, _offset - _limit)
+}
+
 ConstraintUI.prototype.clear = function() {
+	this.clearConstraints();
+	this.clearOrders();
+}
+
+// Remove all constraints
+ConstraintUI.prototype.clearConstraints = function() {
 	this.constraintListElement.find("li[data-field-name]").remove();
+}
+
+// Remove all orderings
+ConstraintUI.prototype.clearOrders = function() {
 	this.orderListElement.find("li.order-line").remove();
 }
