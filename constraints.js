@@ -62,6 +62,8 @@ function ConstraintUI(element, schema) {
 	this.formEndpoint = null;
 }
 
+// Render a field list UI
+// Optionally with a selected field name
 ConstraintUI.prototype.renderFields = function(selection) {
 	var select = $('<select class="field-list"><option value=""></option></select>');
 	
@@ -83,48 +85,44 @@ ConstraintUI.prototype.renderFields = function(selection) {
 	return select;
 }
 
-ConstraintUI.prototype.getFunctions = function(fieldName) {
-	var schema = this.schema[fieldName];
-	
+ConstraintUI.prototype.renderFunctions = function(fieldName) {
 	var functions = [];
+	{
+		var schema = this.schema[fieldName];
+		
+		if (schema === undefined || schema == null)
+			throw "No such field: " + fieldName;
 	
-	if (schema === undefined || schema == null) {
-		throw "No such field: " + fieldName;
+		// Always allow eq and neq
+		functions.push({name: "eq", text: "Is"});
+		functions.push({name: "neq", text: "Is Not"});
+	
+		if (schema.nullable == true) {
+			functions.push({name: "isNull", text: "Absent"});
+			functions.push({name: "isNotNull", text: "Present"});
+		}
+	
+		if (schema.type == 'string') {
+			functions.push({name: "startsWith", text: "Starts"});
+			functions.push({name: "contains", text: "Contains"});
+		}
+	
+		if (schema.type == 'number' || schema.type == 'datetime' || schema.type == 'string') {
+			functions.push({name: "range", text: "Between"});
+			functions.push({name: "gt", text: '>'});
+			functions.push({name: "lt", text: '<'});
+			functions.push({name: "ge", text: '>='});
+			functions.push({name: "le", text: '<='});
+		}
 	}
 	
-	// Always allow eq and neq
-	functions.push({name: "eq", text: "Is"});
-	functions.push({name: "neq", text: "Is Not"});
-	
-	if (schema.nullable == true) {
-		functions.push({name: "isNull", text: "Absent"});
-		functions.push({name: "isNotNull", text: "Present"});
-	}
-	
-	if (schema.type == 'string') {
-		functions.push({name: "startsWith", text: "Starts"});
-		functions.push({name: "contains", text: "Contains"});
-	}
-	
-	if (schema.type == 'number' || schema.type == 'datetime' || schema.type == 'string') {
-		functions.push({name: "range", text: "Between"});
-		functions.push({name: "gt", text: '>'});
-		functions.push({name: "lt", text: '<'});
-		functions.push({name: "ge", text: '>='});
-		functions.push({name: "le", text: '<='});
-	}
-	
-	return { 'functions': functions};
-}
-
-ConstraintUI.prototype.renderFunctions = function(functionDefs) {
 	var select = $('<select class="constraint_function"></select>');
 	
-	for (var i in functionDefs.functions) {
+	for (var i in functions) {
 		var option = $('<option></option>');
 		
-		option.text(functionDefs.functions[i].text);
-		option.val(functionDefs.functions[i].name);
+		option.text(functions[i].text);
+		option.val(functions[i].name);
 		
 		select.append(option);
 	}
@@ -438,7 +436,7 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 			
 			constraintLineLI.data('field-name', fieldName);
 			
-			var functionSelect = this.renderFunctions(this.getFunctions(fieldName));
+			var functionSelect = this.renderFunctions(fieldName);
 			
 			constraintLineLI.append(functionSelect);
 
