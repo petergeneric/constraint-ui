@@ -1,39 +1,5 @@
-var constraintSchema = {
-	'id': {
-		type: 'number',
-		nullable: false
-	},
-	
-	'priority': {
-		type: 'number',
-		nullable: true,
-	},
-
-	'deprecated': {
-		type: 'boolean',
-		nullable: true
-	},
-	
-	'name': {
-		type: 'string',
-		nullable: true
-	},
-	
-	'lastUpdated': {
-		caption: 'last updated',
-		type: 'datetime',
-		nullable: true
-	},
-
-	'state': {
-		type: 'enum',
-		values: ['ONE', 'TWO', 'THREE', 'FAILED']
-	}
-}
-
-var constraintMap = {'priority':['50'],'_limit':['200'],'state':['FAILED'],'_offset':['0']};
-
-
+// When called with an element ref (or selector), creates a new ConstraintUI within that element
+// If called again, returns the same ConstraintUI object, allowing for further manipulation
 function constraints(el, schema) {
 	if (el === undefined || el == null) {
 		throw "No element or element path provided for constraints UI!";
@@ -53,8 +19,6 @@ function constraints(el, schema) {
 }
 
 function ConstraintUI(element, schema) {
-	var self = this;
-	
 	this.element = element;
 	this.schema = schema;
 	
@@ -65,7 +29,10 @@ function ConstraintUI(element, schema) {
 	
 	// Populate constraint add UI
 	var constraintAddDiv = this.constraintListElement.find(".field-add-ui");
-	constraintAddDiv.html(this.renderFields());
+	constraintAddDiv.append(this.renderFields());
+	
+	var self = this;
+
 	constraintAddDiv.find("select.field-list").change(function() {
 		var fieldName = $(this).val();
 		
@@ -96,20 +63,24 @@ function ConstraintUI(element, schema) {
 }
 
 ConstraintUI.prototype.renderFields = function(selection) {
-	var obj = {"ids": []};
+	var select = $('<select class="field-list"><option value=""></option></select>');
 	
 	for (var key in this.schema) {
-		var val;
-		
+		var option = $('<option>');
 		if ('caption' in this.schema[key])
-			val = this.schema[key].caption;
+			option.text(this.schema[key].caption);
 		else
-			val = key;
+			option.text(key);
+
+		option.val(key);
 		
-		obj["ids"].push({'id':key,'caption':val, selected: (key == selection) ? 'selected="selected"' : '' });
+		if (key == selection)
+			option.prop('selected', true);
+		
+		select.append(option);
 	}
 	
-	return Mustache.render('<select class="field-list"><option value=""></option>{{#ids}}<option {{selected}} value="{{id}}">{{caption}}</option>{{/ids}}</select>', obj);
+	return select;
 }
 
 ConstraintUI.prototype.getFunctions = function(fieldName) {
@@ -126,12 +97,12 @@ ConstraintUI.prototype.getFunctions = function(fieldName) {
 	functions.push({name: "neq", text: "Is Not"});
 	
 	if (schema.nullable == true) {
-		functions.push({name: "isNull", text: "Is Not Present"});
-		functions.push({name: "isNotNull", text: "Is Present"});
+		functions.push({name: "isNull", text: "Absent"});
+		functions.push({name: "isNotNull", text: "Present"});
 	}
 	
 	if (schema.type == 'string') {
-		functions.push({name: "startsWith", text: "Starts With"});
+		functions.push({name: "startsWith", text: "Starts"});
 		functions.push({name: "contains", text: "Contains"});
 	}
 	
@@ -147,11 +118,30 @@ ConstraintUI.prototype.getFunctions = function(fieldName) {
 }
 
 ConstraintUI.prototype.renderFunctions = function(functionDefs) {
-	return Mustache.render('<select class="constraint_function"></option>{{#functions}}<option value="{{name}}">{{text}}</option>{{/functions}}</select>', functionDefs);
+	var select = $('<select class="constraint_function"></select>');
+	
+	for (var i in functionDefs.functions) {
+		var option = $('<option></option>');
+		
+		option.text(functionDefs.functions[i].text);
+		option.val(functionDefs.functions[i].name);
+		
+		select.append(option);
+	}
+	
+	return select;
 }
 
 //	returns HTML elements for the provided function (optionally with the default values filled in from argument)
 ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) {
+
+	if (fieldName === undefined || fieldName === null)
+		throw "Must provide field name!";
+	else if (functionName === undefined || functionName === null)
+		throw "Must provide function!";
+	else if (!(fieldName in this.schema))
+		throw "Must provide valid field name!";
+
 	var schema = this.schema[fieldName];
 	
 	// TODO render intelligently based on data type
@@ -167,27 +157,36 @@ ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) 
 		case "le":
 			// TODO implement some date/time picker logic for datetime fields?
 			if (schema.type == 'enum' || schema.type == 'boolean') {
-				var args = {value: argument, selected: function() { if (this == argument) return 'selected="selected"'; else return ''; }};
+				var select;
 				if (schema.type == 'boolean') {
-					args.options = ['true', 'false'];
+					select = $('<select name="value"><option>true</option><option>false</option>');
 				}
 				else {
-					args.options = schema.values;
+					select = $('<select name="value"></select>');
+					
+					for (var i in schema.values) {
+						var value = schema.values[i];
+						select.append($('<option>').text(value));
+					}
 				}
 				
-				return Mustache.render('<select name="value" type="{{inputType}}" value="{{value}}">{{#options}}<option {{selected}}>{{.}}</option>{{/options}}</select>', args);
+				if (argument !== undefined && argument !== null)
+					select.val(argument);
+					
+				return select;
 			}
 			else {
-				var args={value: argument, inputType: (schema.type == 'number') ? "number" : "text"};
-				return Mustache.render('<input name="value" type="{{inputType}}" value="{{value}}" />', args);
+				return $('<input name="value" />').attr('type', (schema.type == 'number') ? "number" : "text").val(argument);
 			}
 		case "range":
 			if (argument == "" || argument == null)
 				argument="..";
 			
-			var fields = argument.split("..",2);
-			var args={from:fields[0],to:fields[1], inputType: "text"}
-			return Mustache.render('<input name="from" type="{{inputType}}" value="{{from}}" /> <input name="to" type="{{inputType}}" value="{{to}}" />',args);
+			var fields = argument.split("..",2);			
+			var from = $('<input name="from" />').attr('type', 'text').val(fields[0]);
+			var to = $('<input name="to" />').attr('type', 'text').val(fields[1]);
+			
+			return $('<span />').append(from).append(' - ').append(to);
 		case "isNull":
 		case "isNotNull":
 			return "";
@@ -224,8 +223,13 @@ ConstraintUI.prototype.setConstraintFunction = function(constraintLI, functionNa
 	var functionSelect = $(constraintLI).find("select:first");
 	var inputsSpan = $(constraintLI).find("span.inputs");
 	
+	if (!fieldName)
+		throw "Could not extract field name from constraint LI";
+	
 	functionSelect.val(functionName);
-	inputsSpan.html(this.renderInput(fieldName, functionName, argument));
+	
+	inputsSpan.empty();
+	inputsSpan.append(this.renderInput(fieldName, functionName, argument));
 }
 
 ConstraintUI.prototype.encodeConstraint = function(fieldName, constraintLI) {
@@ -328,16 +332,35 @@ ConstraintUI.prototype.addOrder = function(fieldName, direction) {
 
 		var ascDescSelect;
 		{	
-			var args = {options: ['asc', 'desc'], selected: function() { if (this == direction) return 'selected="selected"'; else return ''; }};
-		
-			ascDescSelect = Mustache.render('<select name="direction">{{#options}}<option {{selected}}>{{.}}</option>{{/options}}</select>', args);
+			ascDescSelect = $('<select name="direction"></select>');
+			
+			var a = $('<option>asc</option>');
+			var d = $('<option>desc</option>');
+			
+			if (direction == 'asc')
+				a.prop('selected', true);
+			else if (direction == 'desc')
+				d.prop('selected', true);
+				
+			ascDescSelect.append(a);
+			ascDescSelect.append(d);
 		}
-	
-		var el = $('<li class="order-line">' + this.renderFields(fieldName) + ' ' + ascDescSelect + '<a class="order-line_remove" href="#" shape="rect">remove<i class="icon-remove-circle"></i></a></li>');
+
+		var el = $('<li class="order-line"></li>');
 		
-		el.find("a.order-line_remove").click(function() {
-			$(this).closest("li.order-line").remove();
-		});
+		el.append(this.renderFields(fieldName));
+		el.append(ascDescSelect);
+		
+		// TODO customise how remove link is rendered?
+		var removeLink;
+		{
+			removeLink = $('<a class="order-line_remove" href="#" shape="rect">remove<i class="icon-remove-circle"></i></a>');		
+			removeLink.click(function() {
+				$(this).closest("li.order-line").remove();
+			});
+		}
+		
+		el.append(removeLink);
 		
 		el.insertBefore(insertionPoint);
 	}
@@ -372,10 +395,19 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 		}
 		else {
 			// Carry it as a literal field
-			this.constraintListElement.append(Mustache.render('<input class="literal-constraint" type="hidden" name="{{name}}" value="{{value}}" />', {'name': fieldName, 'value': argument}));
+			var input = $('<input class="literal-constraint" type="hidden" />');
+			
+			input.attr('name', fieldName);
+			input.val(argument);
+			
+			this.constraintListElement.append(input);
 		}
 	}
 	else {
+		// TODO auto-define unknown constraints?
+		if (!(fieldName in this.schema))
+			throw "No such field defined: " + fieldName;
+		
 		var schema = this.schema[fieldName];
 	
 		// TODO figure out if we have a field already. If we do already when skip the addition of the field entry
@@ -385,9 +417,15 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 			// Find the UL
 			var constraintUL = $(existingField).find("ul");
 		
-			constraintUL.append('<li class="constraint-line">' + this.renderFunctions(this.getFunctions(fieldName)) + '<span class="inputs" /> <a class="constraint-line_remove" href="#" shape="rect">remove<i class="icon-remove-circle"></i></a></li>');
-		
-			var functionSelect = constraintUL.find("li:last > select:first");
+			var constraintLineLI = $('<li class="constraint-line"></li>');
+			
+			constraintLineLI.data('field-name', fieldName);
+			
+			var functionSelect = this.renderFunctions(this.getFunctions(fieldName));
+			
+			constraintLineLI.append(functionSelect);
+
+			constraintLineLI.append($('<span class="inputs" /> <a class="constraint-line_remove" href="#" shape="rect">remove<i class="icon-remove-circle"></i></a>'));
 		
 			var self = this;
 			functionSelect.change(function() {
@@ -396,6 +434,8 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 	
 				self.setConstraintFunction(constraintLI, functionName, "");
 			});
+			
+			constraintUL.append(constraintLineLI);
 
 			// set the default value
 			this.setConstraintFunction(functionSelect.parent(), functionName, argument);

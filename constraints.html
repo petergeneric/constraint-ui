@@ -2,22 +2,8 @@
 <head></head>
 <body>
 
-<ul id="constraintui">
-</ul>
-
-<pre style="display: none;">
-addProperty("id")
-addConstraint("id", "eq", "abc")
-
-addConstraint:
- - Look for li with data-property-name="id"
-  - If one exists, add a new ul/li
-  - Otherwise, add a new base li
-  - Add a select function
-  - select.changed(function to change the inputs)
-  - call 
- - Add a new ul/li 
-</pre>
+	<ul id="constraintui">
+	</ul>
 
 	<button id="encodeConstraintsButton">Display Constraints</button>
 	
@@ -25,11 +11,47 @@ addConstraint:
 	
 	<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
 	<script type="text/javascript" src="constraints.js"></script>
-	<script type="text/javascript" src="mustache.min.js"></script>
 	
 	<!-- Initialise the constraints logic on any .constraint_list element -->
 	<script type="text/javascript">
-		constraints("#constraintui", constraintSchema);
+		$(document).ready(function() {
+			var constraintSchema = {
+				'id': {
+					type: 'number',
+					nullable: false
+				},
+	
+				'priority': {
+					type: 'number',
+					nullable: true,
+				},
+
+				'deprecated': {
+					type: 'boolean',
+					nullable: true
+				},
+	
+				'name': {
+					type: 'string',
+					nullable: true
+				},
+	
+				'lastUpdated': {
+					caption: 'last updated',
+					type: 'datetime',
+					nullable: true
+				},
+
+				'state': {
+					type: 'enum',
+					values: ['ONE', 'TWO', 'THREE', 'FAILED']
+				}
+			}
+
+			var constraintMap = {'priority':['_f_neq_50'],'_limit':['200'],'state':['FAILED'],'_offset':['0']};
+
+			constraints("#constraintui", constraintSchema).decodeConstraints(constraintMap);
+		});
 		
 		$('#encodeConstraintsButton').click(function() {
 			$("#constraint-render").text($.param(constraints("#constraintui").encodeConstraints(),true));
