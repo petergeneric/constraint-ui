@@ -216,7 +216,7 @@ ConstraintUI.prototype.encodeOrder = function(orderLI) {
 	return fieldName + ' ' + direction;
 }
 
-ConstraintUI.prototype.encodeConstraints = function() {
+ConstraintUI.prototype.getConstraints = function() {
 	var self = this;
 	
 	var encodeInputs = function(inputsSpan, functionName, fieldName) {
@@ -301,7 +301,7 @@ ConstraintUI.prototype.encodeConstraints = function() {
 	return encoded;
 }
 
-ConstraintUI.prototype.decodeConstraints = function(encoded) {
+ConstraintUI.prototype.setConstraints = function(encoded) {
 	// Remove all constraints
 	this.clear();
 	
@@ -526,7 +526,7 @@ ConstraintUI.prototype.submit = function(method, endpoint) {
 	else if (this.formEndpoint !== null)
 		form.attr('action', this.formEndpoint);
 	
-	var constraints = this.encodeConstraints();
+	var constraints = this.getConstraints();
 
 	// Builds hidden input elements	
 	var inputFunction = function(name,value) {
@@ -563,7 +563,7 @@ ConstraintUI.prototype.prevPage = function() {
 }
 
 ConstraintUI.prototype.pageDelta = function(delta) {
-	var encoded = this.encodeConstraints();
+	var encoded = this.getConstraints();
 	
 	var offset = ('_offset' in encoded) ? encoded['_offset'] : 0;
 	var limit = ('_limit' in encoded) ? encoded['_limit'] : 200;
@@ -582,7 +582,7 @@ ConstraintUI.prototype.page = function(num) {
 	if (num < 0)
 		throw "Page number must be positive integer";
 	
-	var encoded = this.encodeConstraints();
+	var encoded = this.getConstraints();
 	
 	addConstraint('_offset', limit * num);
 	

@@ -5,7 +5,7 @@
 	<ul id="constraintui">
 	</ul>
 
-	<button id="encodeConstraintsButton">Display Constraints</button>
+	<button id="getConstraintsButton">Display Constraints</button>
 	
 	<pre id="constraint-render"></pre>
 	
@@ -51,11 +51,11 @@
 
 			var constraintMap = {'priority':['_f_neq_50'],'_limit':['200'],'state':['FAILED'],'_offset':['0']};
 
-			constraints("#constraintui", constraintSchema).decodeConstraints(constraintMap);
+			constraints("#constraintui", constraintSchema).setConstraints(constraintMap);
 		});
 		
-		$('#encodeConstraintsButton').click(function() {
-			$("#constraint-render").text($.param(constraints("#constraintui").encodeConstraints(),true));
+		$('#getConstraintsButton').click(function() {
+			$("#constraint-render").text($.param(constraints("#constraintui").getConstraints(),true));
 		});
 	</script>
 </body>
