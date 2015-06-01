@@ -23,7 +23,7 @@ function ConstraintUI(element, schema) {
 	this.schema = schema;
 	this.allowUnknownFields = true;
 	
-	element.append('<h3>Constraints</h3><ul class="constraint-list"><li>Add Field: <span class="field-add-ui"></span></li></ul> <br />  <h3>Order</h3><ul class="order-list"><li>Add order: <span class="field-add-ui"></span></li></ul></select>');
+	element.append('<h3>Constraints</h3><ul class="constraint-list"><li>New Constraint: <span class="field-add-ui"></span></li></ul> <br />  <h3>Order</h3><ul class="order-list"><li>Add order: <span class="field-add-ui"></span></li></ul></select>');
 	
 	this.constraintListElement = element.find("ul.constraint-list");
 	this.orderListElement = element.find("ul.order-list");
@@ -202,7 +202,8 @@ ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) 
 				return select;
 			}
 			else {
-				return $('<input name="value" />').attr('type', (schema.type == 'number') ? "number" : "text").val(argument);
+				// N.B. number input types don't allow strings like "max" and "min"
+				return $('<input name="value" type="text" />').val(argument);
 			}
 		case "range":
 			if (argument == "" || argument == null)
@@ -521,7 +522,7 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 			li.append(caption + ' matches any of: ');
 			
 			var removeLink = $('<a class="constraint_remove" href="#" shape="rect"><i class="icon-remove"></i> Remove</a>');
-			var addLink = $('<a class="constraint_value_add" href="#" shape="rect" title="Add Constraint"><i class="icon-plus"></i> Add Constraint</a>');
+			var addLink = $('<a class="constraint_value_add" href="#" shape="rect" title="Add"><i class="icon-plus"></i> Add</a>');
 			
 			li.append(addLink);
 			li.append(' ');
@@ -530,10 +531,8 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
 			// Add empty UL for constraint lines
 			li.append($('<ul></ul>'));
 			
-			//var skel = $('<li data-field-name="' + fieldName +'"><span>' + caption + ' matches any of:</span><ul></ul></li>');
-			
-			// TODO append instead of prepend?
-			this.constraintListElement.prepend(li);
+			// Add the constraint entry just before the "Add Constraint" UI
+			li.insertBefore(this.constraintListElement.find("li:last"));
 		
 			removeLink.click(function() {
 				$(this).closest("li[data-field-name]").remove();
