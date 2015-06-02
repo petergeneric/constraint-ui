@@ -27,8 +27,8 @@ function ConstraintUI(element, schema, configurator) {
 	this.styling = {
 		ascdesc: 'span1',
 		input: null,
-		rangeinput_from: 'span2',
-		rangeinput_to: 'span2',
+		rangeinput_from: 'span1',
+		rangeinput_to: 'span1',
 		functionselect: 'span2',
 		fieldselect: null,
 		enumselect: null
