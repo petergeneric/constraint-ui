@@ -673,7 +673,7 @@ ConstraintUI.prototype.pageDelta = function(delta) {
     var newOffset = Math.max(0, offset + (delta*limit));
 
     if (newOffset != offset) {
-        addConstraint('_offset', newOffset);
+        this.addConstraint('_offset', newOffset);
 
         this.submit();
     }
@@ -685,7 +685,7 @@ ConstraintUI.prototype.page = function(num) {
 
     var encoded = this.getConstraints();
 
-    addConstraint('_offset', limit * num);
+    this.addConstraint('_offset', limit * num);
 
     this.submit();
 }
