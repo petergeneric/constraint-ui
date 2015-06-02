@@ -462,7 +462,7 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
     if (argument === undefined && functionName != null) {
         var encoded = functionName;
 
-        if (encoded.startsWith("_f_")) {
+        if (String(encoded).startsWith("_f_")) {
             var fields = encoded.split("_", 4);
 
             functionName= fields[2];
@@ -670,7 +670,7 @@ ConstraintUI.prototype.pageDelta = function(delta) {
     var limit = ('_limit' in encoded) ? encoded['_limit'] : 200;
 
     // Make sure we never go below zero (in the case of a negative delta)
-    var newOffset = Math.max(0, offset + (delta*limit));
+    var newOffset = Math.max(0, Number(offset) + (delta * Number(limit)));
 
     if (newOffset != offset) {
         this.addConstraint('_offset', newOffset);
@@ -685,7 +685,10 @@ ConstraintUI.prototype.page = function(num) {
 
     var encoded = this.getConstraints();
 
-    this.addConstraint('_offset', limit * num);
+	var offset = ('_offset' in encoded) ? encoded['_offset'] : 0;
+	var limit = ('_limit' in encoded) ? encoded['_limit'] : 200;
+
+    this.addConstraint('_offset', Number(limit) * num);
 
     this.submit();
 }
