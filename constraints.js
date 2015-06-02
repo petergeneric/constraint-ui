@@ -106,12 +106,8 @@ ConstraintUI.prototype.renderFunctions = function(fieldName) {
         functions.push({name: "neq", text: "Is Not"});
 
         if (schema.nullable == true) {
-	        console.log("Schema.nullable=true for " + fieldName,schema);
             functions.push({name: "isNull", text: "Absent"});
             functions.push({name: "isNotNull", text: "Present"});
-        }
-	    else {
-	        console.log("Schema.nullable=false for " + fieldName,schema);
         }
 
         if (schema.type == 'string') {
@@ -200,7 +196,7 @@ ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) 
         var period = '[Pp](([0-9]+[YMWDymwd])+|([0-9]+[YMWDymwd])*[Tt]([0-9\.]+[HMShms])+)';
 
         // Exact datetime OR an expression. In expressions space and plus are treated identically
-        input.attr('pattern', '('+datetime+'|(now|today|tomorrow|yesterday|sow)(( |-|\+)'+ period + ')?)');
+        input.attr('pattern', '('+datetime+'|(now|today|tomorrow|yesterday|sow)([- +]'+ period + ')?)');
         input.attr('title', 'Expected ISO8601 date, ISO8601 datetime or time expression (now, today, tomorrow, yesterday,sow, then optionally +/- ISO8601 period)');
     }
 
@@ -405,6 +401,15 @@ ConstraintUI.prototype.addOrder = function(fieldName, direction) {
         fieldName = window.prompt("Please provide custom field name");
         this.addDummyField(fieldName);
     }
+	else if (!(fieldName in this.schema)) {
+	    // Either enforce that it must be a known field or dynamically add the unknown field
+
+		if(this.allowUnknownFields)
+			this.addDummyField(fieldName);
+		else
+			throw "No such field with name: " + fieldName;
+	}
+
 
     var existingElement = this.orderListElement.find('li.order-line > select.field-list').filter(function(i,e) {
         return ($(e).val() == fieldName);
@@ -418,6 +423,8 @@ ConstraintUI.prototype.addOrder = function(fieldName, direction) {
         var ascDescSelect;
         {
             ascDescSelect = $('<select name="direction"></select>');
+
+	        ascDescSelect.addClass("span1");
 
             var a = $('<option>asc</option>');
             var d = $('<option>desc</option>');
@@ -467,8 +474,12 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
         }
     }
 
-    // Default the function name
-    if (functionName == null)
+    // Default the function name (N.B. take account of null/not null restrictions)
+	if (functionName == null && argument == "_null")
+		functionName = "isNull";
+	if (functionName == null && argument == "_notnull")
+		functionName = "isNotNull";
+    else if (functionName == null)
         functionName = 'eq';
 
     // If custom field name, prompt the user to supply it
