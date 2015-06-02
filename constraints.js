@@ -462,7 +462,7 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
     if (argument === undefined && functionName != null) {
         var encoded = functionName;
 
-        if (String(encoded).startsWith("_f_")) {
+        if (String(encoded).indexOf("_f_") == 0) {
             var fields = encoded.split("_", 4);
 
             functionName= fields[2];
@@ -489,7 +489,7 @@ ConstraintUI.prototype.addConstraint = function(fieldName, functionName, argumen
         this.addDummyField(fieldName);
     }
 
-    if (fieldName.startsWith("_")) {
+    if (fieldName.indexOf("_") == 0) {
         if (fieldName == '_order') {
             // Call the addOrder logic
             var fields = argument.split(" ", 2);
