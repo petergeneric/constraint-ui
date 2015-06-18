@@ -216,8 +216,8 @@ ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) 
 		var period = '[Pp](([0-9]+[YMWDymwd])+|([0-9]+[YMWDymwd])*[Tt]([0-9\.]+[HMShms])+)';
 
 		// Exact datetime OR an expression. In expressions space and plus are treated identically
-		input.attr('pattern', '('+datetime+'|(now|today|tomorrow|yesterday|sow)([- +]'+ period + ')?)');
-		input.attr('title', 'Expected ISO8601 date, ISO8601 datetime or time expression (now, today, tomorrow, yesterday,sow, then optionally +/- ISO8601 period)');
+		input.attr('pattern', '('+datetime+'|(now|today|tomorrow|yesterday|sow|som|soy)([- +]'+ period + ')?)');
+		input.attr('title', 'Expected ISO8601 date, ISO8601 datetime or time expression (now, today, tomorrow, yesterday,sow,som,soy then optionally +/- ISO8601 period)');
 	}
 
 	var addValidation = function(dataType, input) {
