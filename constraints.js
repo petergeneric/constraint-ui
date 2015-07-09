@@ -131,7 +131,7 @@ ConstraintUI.prototype.renderFunctions = function(fieldName) {
 		}
 
 		if (schema.type == 'string') {
-			functions.push({name: "startsWith", text: "Starts"});
+			functions.push({name: "starts", text: "Starts"});
 			functions.push({name: "contains", text: "Contains"});
 		}
 
@@ -230,7 +230,7 @@ ConstraintUI.prototype.renderInput = function(fieldName,functionName, argument) 
 	switch(functionName) {
 		case "eq":
 		case "neq":
-		case "startsWith":
+		case "starts":
 		case "contains":
 		case "gt":
 		case "ge":
@@ -322,7 +322,7 @@ ConstraintUI.prototype.getConstraints = function() {
 		switch(functionName) {
 			case 'eq':
 			case 'neq':
-			case 'startsWith':
+			case 'starts':
 			case 'contains':
 			case 'gt':
 			case 'lt':
