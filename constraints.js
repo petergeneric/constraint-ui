@@ -341,7 +341,7 @@ ConstraintUI.prototype.setConstraintFunction = function (constraintLI, functionN
 	var inputsSpan = $(constraintLI).find("span.inputs");
 
 	if (!fieldName)
-		throw "Could not extract field name from constraint LI";
+		throw "Could not extract field name from constraint <LI>";
 
 	functionSelect.val(functionName);
 
@@ -442,17 +442,17 @@ ConstraintUI.prototype.getConstraints = function () {
 }
 
 ConstraintUI.prototype.parseConstraints = function (queryString) {
-       var map = {};
+	var map = {};
 
-       var qs = new URLSearchParams(queryString);
+	var qs = new URLSearchParams(queryString);
 
-       for (var key of qs.keys()) {
-               const val = qs.getAll(key);
+	for (var key of qs.keys()) {
+		const val = qs.getAll(key);
 
-               map[key] = val;
-       }
+		map[key] = val;
+	}
 
-       this.setConstraints(map);
+	this.setConstraints(map);
 }
 
 ConstraintUI.prototype.setConstraints = function (encoded) {
@@ -626,15 +626,13 @@ ConstraintUI.prototype.addConstraint = function (fieldName, functionName, argume
 			// Find the UL
 			var constraintUL = $(existingField).find("ul");
 
-			var constraintLineLI = $('<li class="constraint-line"></li>');
+			var constraintLineLI = $('<li class="constraint-line"><span class="inputs"></span> <a class="text-decoration-none constraint-line_remove" href="#">ⓧ</a></li>');
 
 			constraintLineLI.data('field-name', fieldName);
 
 			var functionSelect = this.renderFunctions(fieldName);
 
-			constraintLineLI.append(functionSelect);
-
-			constraintLineLI.append($('<span class="inputs" /> <a class="constraint-line_remove" href="#" shape="rect"><i class="icon-remove-circle"></i></a>'));
+			constraintLineLI.prepend(functionSelect);
 
 			var self = this;
 			functionSelect.change(function () {
@@ -649,7 +647,7 @@ ConstraintUI.prototype.addConstraint = function (fieldName, functionName, argume
 			// set the default value
 			this.setConstraintFunction(functionSelect.parent(), functionName, argument);
 
-			constraintUL.find("a.constraint-line_remove").click(function () {
+			constraintLineLI.find(".constraint-line_remove").click(function () {
 				if ($(this).closest("li[data-field-name]").find("li.constraint-line").length == 1) {
 					// This was the last constraint, remove this field's entry
 					$(this).closest("li[data-field-name]").remove();
@@ -657,6 +655,8 @@ ConstraintUI.prototype.addConstraint = function (fieldName, functionName, argume
 					// Remove only this constraint line
 					$(this).closest("li.constraint-line").remove();
 				}
+
+				return false;
 			});
 		} else {
 			var caption = ('caption' in schema) ? schema.caption : fieldName;
