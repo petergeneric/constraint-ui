@@ -397,6 +397,20 @@ ConstraintUI.prototype.getConstraints = function() {
 	return encoded;
 }
 
+ConstraintUI.prototype.parseConstraints = function(queryString) {
+	var map = {};
+	
+	var qs = new URLSearchParams(queryString);
+	
+	for(var key of qs.keys()) {
+		const val = qs.getAll(key);
+		
+		map[key] = val;
+	}
+	
+	this.setConstraints(map);
+}
+
 ConstraintUI.prototype.setConstraints = function(encoded) {
 	// Remove all constraints
 	this.clear();
