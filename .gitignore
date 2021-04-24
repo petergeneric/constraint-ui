@@ -1,0 +1,15 @@
+.vagrant
+.classpath
+.project
+.settings/
+.metadata/
+target/
+bin/
+.DS_Store
+*.ipr
+*.iws
+.idea/*
+!.idea/codeStyleSettings.xml
+*.iml
+atlassian-ide-plugin.xml
+utilities/encompass-stub-server/web-app/plugins/

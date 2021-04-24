@@ -18,6 +18,7 @@ window.constraints = function(el, schema, configurator) {
 	}
 }
 
+
 function ConstraintUI(element, schema, configurator) {
 	this.element = element;
 	this.schema = schema;
