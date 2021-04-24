@@ -17,7 +17,6 @@ window.constraints = function (el, schema, configurator) {
 	}
 }
 
-
 function ConstraintUI(element, schema, configurator) {
 	this.element = element;
 	this.schema = schema;
@@ -34,15 +33,17 @@ function ConstraintUI(element, schema, configurator) {
 		enumselect: null
 	};
 
+	element.append('<style>input:invalid { border: red solid 3px; } </style>');
 	element.append('<h3>Constraints</h3><ul class="constraint-list"><li>New Constraint: <span class="field-add-ui"></span></li></ul> <br />  <h3>Order</h3><ul class="order-list"><li>Add order: <span class="field-add-ui"></span></li></ul></select>');
 
-	this.constraintListElement = element.find("ul.constraint-list");
-	this.orderListElement = element.find("ul.order-list");
+	this.constraintListElement = element.find(".constraint-list");
+	this.orderListElement = element.find(".order-list");
+	this.orderSectionElement = element.find(".order-section");
 
 	// Give the configurator a chance to configure us
 	if (configurator) {
 		if ('apply' in configurator)
-			config.apply(this);
+			configurator.apply(this);
 
 		if ('styling' in configurator)
 			this.styling = configurator.styling;
@@ -83,7 +84,7 @@ function ConstraintUI(element, schema, configurator) {
 // Render a field list UI
 // Optionally with a selected field name
 ConstraintUI.prototype.renderFields = function (selection, allowCustom) {
-	var select = $('<select class="field-list"><option value=""></option></select>');
+	var select = $('<select class="dropdown field-list"><option value=""></option></select>');
 
 	select.addClass(this.styling.fieldselect);
 
@@ -121,29 +122,62 @@ ConstraintUI.prototype.renderFunctions = function (fieldName) {
 			throw "No such field: " + fieldName;
 
 		// Always allow eq and neq
-		functions.push({name: "eq", text: "Is"});
-		functions.push({name: "neq", text: "Is Not"});
+		functions.push({
+			name: "eq",
+			text: "Is"
+		});
+		functions.push({
+			name: "neq",
+			text: "Is Not"
+		});
 
 		if (schema.nullable == true) {
-			functions.push({name: "isNull", text: "Absent"});
-			functions.push({name: "isNotNull", text: "Present"});
+			functions.push({
+				name: "isNull",
+				text: "Absent"
+			});
+			functions.push({
+				name: "isNotNull",
+				text: "Present"
+			});
 		}
 
 		if (schema.type == 'string') {
-			functions.push({name: "starts", text: "Starts"});
-			functions.push({name: "contains", text: "Contains"});
+			functions.push({
+				name: "starts",
+				text: "Starts"
+			});
+			functions.push({
+				name: "contains",
+				text: "Contains"
+			});
 		}
 
 		if (schema.type == 'number' || schema.type == 'datetime' || schema.type == 'string') {
-			functions.push({name: "range", text: "Between"});
-			functions.push({name: "gt", text: '>'});
-			functions.push({name: "lt", text: '<'});
-			functions.push({name: "ge", text: '>='});
-			functions.push({name: "le", text: '<='});
+			functions.push({
+				name: "range",
+				text: "Between"
+			});
+			functions.push({
+				name: "gt",
+				text: '>'
+			});
+			functions.push({
+				name: "lt",
+				text: '<'
+			});
+			functions.push({
+				name: "ge",
+				text: '>='
+			});
+			functions.push({
+				name: "le",
+				text: '<='
+			});
 		}
 	}
 
-	var select = $('<select class="constraint_function"></select>');
+	var select = $('<select class="dropdown constraint_function"></select>');
 
 	select.addClass(this.styling.functionselect);
 
@@ -235,42 +269,56 @@ ConstraintUI.prototype.renderInput = function (fieldName, functionName, argument
 		case "ge":
 		case "lt":
 		case "le":
-			// TODO implement some date/time picker logic for datetime fields?
-			if (schema.type == 'enum' || schema.type == 'boolean') {
-				var select;
-				if (schema.type == 'boolean') {
-					select = $('<select name="value"><option>true</option><option>false</option>');
-				} else {
-					select = $('<select name="value"></select>');
 
-					for (var i in schema.values) {
-						var value = schema.values[i];
-						select.append($('<option>').text(value));
-					}
-				}
-
-				if (argument !== undefined && argument !== null)
-					select.val(argument);
-
-				select.addClass(this.styling.enumselect);
-
-				return select;
-			} else {
-				var input = $('<input name="value" type="text" />').val(argument);
-
+			if (schema.type == 'datetime') {
+				var input = $('<i class="calendar icon"></i><input type="text" name="value"/>').val(argument);
 				input.addClass(this.styling.input);
-
 				addValidation(schema.type, input);
-
 				return input;
+			} else {
+				if (schema.type == 'enum' || schema.type == 'boolean') {
+
+					var select;
+					if (schema.type == 'boolean') {
+						select = $('<select class="dropdown" name="value"><option>true</option><option>false</option>');
+					} else {
+						select = $('<select class="dropdown" name="value"></select>');
+
+						for (var i in schema.values) {
+							var value = schema.values[i];
+							select.append($('<option>').text(value));
+						}
+					}
+
+					if (argument !== undefined && argument !== null)
+						select.val(argument);
+
+					select.addClass(this.styling.enumselect);
+
+					return select;
+				} else {
+					var input = $('<input name="value" type="text" />').val(argument);
+
+					input.addClass(this.styling.input);
+
+					addValidation(schema.type, input);
+
+					return input;
+				}
 			}
 		case "range":
 			if (argument == "" || argument == null)
 				argument = "..";
 
 			var fields = argument.split("..", 2);
-			var from = $('<input name="from" type="text" />').val(fields[0]);
-			var to = $('<input name="to" type="text" />').val(fields[1]);
+
+			if (schema.type == 'datetime') {
+				var from = $('<i class="calendar icon"></i><input type="date" name="from"/>').val(fields[0]);
+				var to = $('<i class="calendar icon"></i><input type="date" name="to"/>').val(fields[1]);
+			} else {
+				var from = $('<input name="from" type="text" />').val(fields[0]);
+				var to = $('<input name="to" type="text" />').val(fields[1]);
+			}
 
 			from.addClass(this.styling.rangeinput_from);
 			to.addClass(this.styling.rangeinput_to);
@@ -394,17 +442,17 @@ ConstraintUI.prototype.getConstraints = function () {
 }
 
 ConstraintUI.prototype.parseConstraints = function (queryString) {
-	var map = {};
+       var map = {};
 
-	var qs = new URLSearchParams(queryString);
+       var qs = new URLSearchParams(queryString);
 
-	for (var key of qs.keys()) {
-		const val = qs.getAll(key);
+       for (var key of qs.keys()) {
+               const val = qs.getAll(key);
 
-		map[key] = val;
-	}
+               map[key] = val;
+       }
 
-	this.setConstraints(map);
+       this.setConstraints(map);
 }
 
 ConstraintUI.prototype.setConstraints = function (encoded) {
@@ -425,7 +473,7 @@ ConstraintUI.prototype.setConstraints = function (encoded) {
 	}
 }
 
-// Replace the ordering 
+// Replace the ordering
 ConstraintUI.prototype.setOrder = function (fieldName, direction) {
 	this.clearOrder();
 
@@ -500,6 +548,9 @@ ConstraintUI.prototype.addOrder = function (fieldName, direction) {
 }
 
 ConstraintUI.prototype.addConstraint = function (fieldName, functionName, argument) {
+	if (!fieldName)
+		return; // If no field name supplied, return immediately
+
 	if (argument === undefined && functionName != null) {
 		var encoded = functionName;
 
